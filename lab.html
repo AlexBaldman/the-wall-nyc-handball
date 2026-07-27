@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#05070d">
+    <title>The Wall — Accuracy Lab</title>
+    <meta name="description" content="A true-scale 3D physics and control laboratory for The Wall NYC handball game.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2305070d'/%3E%3Cpath d='M10 12h10l5 27 7-20h7l6 20 4-27h9L49 53H39l-4-18-7 18H18z' fill='%23ff9f32'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/styles/tokens.css">
+    <link rel="stylesheet" href="lab.css">
+    <script type="module" src="src/labs/ball-lab.js"></script>
+</head>
+<body>
+    <header class="lab-topbar">
+        <a class="lab-brand" href="index.html" aria-label="Back to The Wall match">
+            <span class="lab-brand__mark">W</span>
+            <span><b>The Wall</b><small>Accuracy Lab · 0.4 alpha</small></span>
+        </a>
+        <div class="lab-topbar__actions">
+            <span class="solver-badge"><i></i> 240 Hz BallisticsCore</span>
+            <span class="controller-badge" id="controllerBadge"><i></i><b id="controllerName">Keys + mouse</b></span>
+            <a class="back-link" href="index.html">Play 2.5D match ↗</a>
+        </div>
+    </header>
+
+    <main class="lab-shell">
+        <section class="lab-hero">
+            <div>
+                <p class="eyebrow">Real measurements · emergent contact</p>
+                <h1>Don’t choose the shot.<br><em>Make the contact.</em></h1>
+            </div>
+            <p class="hero-note">The court, ball, wall, floor, hand and spin all use meters, seconds and kilograms. Your feet, preparation, aim and collision decide what comes out.</p>
+        </section>
+
+        <section class="lab-grid">
+            <div class="viewport-panel">
+                <div class="viewport-wrap" id="viewportWrap">
+                    <canvas id="labCanvas" tabindex="0" aria-label="True-scale 3D one-wall handball physics lab"></canvas>
+                    <div class="scanlines" aria-hidden="true"></div>
+
+                    <div class="lab-hud lab-hud--top">
+                        <div>
+                            <span>Live result</span>
+                            <strong id="resultLabel">Ready for the feed</strong>
+                        </div>
+                        <div class="live-metrics">
+                            <span><b id="speedMetric">0.0</b> mph</span>
+                            <span><b id="spinMetric">0</b> rpm</span>
+                            <span><b id="heightMetric">—</b> wall</span>
+                        </div>
+                    </div>
+
+                    <div class="match-ribbon" id="matchRibbon">
+                        <div><span>You</span><b id="playerMatchScore">0</b></div>
+                        <p>
+                            <strong id="turnIndicator">Sparring lab</strong>
+                            <small><b id="serveOwner">You serve</b> · <span id="rallyMetric">0-contact rally</span></small>
+                        </p>
+                        <div><b id="aiMatchScore">0</b><span>Wall Ghost</span></div>
+                    </div>
+
+                    <div class="ai-readout" id="aiReadout">
+                        <span>Ghost perception</span>
+                        <strong id="aiReadLabel">Waiting · 96 ms delay</strong>
+                    </div>
+
+                    <div class="intent-card" id="intentCard">
+                        <span>Intention ≠ prediction</span>
+                        <strong id="intentLabel">Open palm · control</strong>
+                        <small id="intentDetail">Point at the wall, hold, then release through the ball.</small>
+                    </div>
+
+                    <div class="world-hint" id="worldHint">
+                        <span>01</span>
+                        <strong>Move → point → hold <kbd>A</kbd> → release</strong>
+                        <small>The ball only leaves if your hand actually meets it.</small>
+                    </div>
+
+                    <div class="charge-readout" id="chargeReadout" aria-hidden="true">
+                        <span id="chargeLabel">Set the hand</span>
+                        <div><i id="chargeFill"></i><b class="plateau"></b></div>
+                        <small id="chargeHint">Control is already available</small>
+                    </div>
+
+                    <div class="camera-dock" aria-label="Camera controls">
+                        <button type="button" data-camera="tactical">Tactical</button>
+                        <button class="active" type="button" data-camera="player">Player</button>
+                        <button type="button" data-camera="courtside">Courtside</button>
+                        <label>Zoom <input id="cameraZoom" type="range" min="35" max="70" step="1" value="50"><output id="cameraZoomValue">50 mm</output></label>
+                    </div>
+
+                    <div class="callout" id="callout" aria-live="assertive"></div>
+                </div>
+
+                <div class="action-strip">
+                    <button class="rally-button" id="rallyButton" type="button">
+                        <span id="rallyButtonLabel">Spar with Ghost</span><kbd>R</kbd>
+                        <small id="rallyButtonHint">First to 5 · server scores</small>
+                    </button>
+                    <button id="feedButton" type="button">
+                        <span>Feed the ball</span><kbd>F</kbd>
+                    </button>
+                    <button id="dropButton" type="button"><span>Official drop test</span><small>70″ → 48–52″</small></button>
+                    <button id="resetLabButton" type="button"><span>Reset rally</span><small>Same seed</small></button>
+                    <button id="replayButton" type="button"><span>Replay last contact</span><small id="replayCount">0 events</small></button>
+                </div>
+
+                <div class="technique-deck" aria-label="Contact controls">
+                    <button class="technique-button active" type="button" data-technique="palm">
+                        <kbd>A / ×</kbd><span>Open palm</span><small>Control</small>
+                    </button>
+                    <button class="technique-button" type="button" data-technique="topspin">
+                        <kbd>X / □</kbd><span>Topspin</span><small>Dip + jump</small>
+                    </button>
+                    <button class="technique-button" type="button" data-technique="backspin">
+                        <kbd>B / ○</kbd><span>Backspin</span><small>Float + skid</small>
+                    </button>
+                    <button class="technique-button" type="button" data-technique="fist">
+                        <kbd>Y / △</kbd><span>Fist</span><small>Hard + knuckle</small>
+                    </button>
+                    <div class="modifier-stack">
+                        <span><kbd>LB</kbd> left English</span>
+                        <span><kbd>RB</kbd> right English</span>
+                        <span><kbd>LT</kbd> lift</span>
+                        <span><kbd>RT</kbd> drive</span>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="instrument-panel">
+                <section class="instrument-card geometry-card">
+                    <div class="card-heading">
+                        <span>01 · Official geometry</span>
+                        <strong>Regulation one-wall</strong>
+                    </div>
+                    <dl>
+                        <div><dt>Wall</dt><dd>20′ × 16′</dd></div>
+                        <div><dt>Short</dt><dd>16′</dd></div>
+                        <div><dt>Serve marks</dt><dd>25′</dd></div>
+                        <div><dt>Long</dt><dd>34′</dd></div>
+                    </dl>
+                    <p>The old court used the right ratios. This camera uses true perspective, a 5′11″ player and the physical 1⅞″ ball so those distances finally read correctly.</p>
+                </section>
+
+                <section class="instrument-card">
+                    <div class="card-heading">
+                        <span>02 · Physical coefficients</span>
+                        <strong>Ballistics mixer</strong>
+                    </div>
+                    <label class="mixer-control">
+                        <span><b>Court tempo</b><output id="tempoValue">78%</output></span>
+                        <input id="tempoScale" type="range" min="55" max="110" step="1" value="78">
+                        <small>Presentation time only · 100% is street-real speed</small>
+                    </label>
+                    <label class="mixer-control">
+                        <span><b>Floor rebound</b><output id="floorRestitutionValue">0.852</output></span>
+                        <input id="floorRestitution" type="range" min="0.78" max="0.92" step="0.001" value="0.852">
+                        <small id="dropReadout">Predicted drop rebound: 50.0″</small>
+                    </label>
+                    <label class="mixer-control">
+                        <span><b>Wall rebound</b><output id="wallRestitutionValue">0.880</output></span>
+                        <input id="wallRestitution" type="range" min="0.72" max="0.98" step="0.001" value="0.88">
+                    </label>
+                    <label class="mixer-control">
+                        <span><b>Air drag</b><output id="dragValue">100%</output></span>
+                        <input id="dragScale" type="range" min="0" max="180" step="1" value="100">
+                    </label>
+                    <label class="mixer-control">
+                        <span><b>Magnus spin</b><output id="magnusValue">100%</output></span>
+                        <input id="magnusScale" type="range" min="0" max="180" step="1" value="100">
+                    </label>
+                    <button class="reset-physics" id="resetPhysicsButton" type="button">Restore official profile</button>
+                </section>
+
+                <section class="instrument-card">
+                    <div class="card-heading">
+                        <span>03 · Contact truth</span>
+                        <strong id="contactGrade">No contact yet</strong>
+                    </div>
+                    <div class="contact-grid">
+                        <span>Spacing<b id="spacingMetric">—</b></span>
+                        <span>Preparation<b id="prepMetric">—</b></span>
+                        <span>Hand speed<b id="handMetric">—</b></span>
+                        <span>First bounce<b id="bounceMetric">—</b></span>
+                    </div>
+                    <p id="contactReason">Feed a ball. Move into its lane. Hold a contact button and release as it enters reach.</p>
+                </section>
+
+                <section class="instrument-card replay-card">
+                    <div class="card-heading">
+                        <span>04 · Deterministic record</span>
+                        <strong>Replay inspector</strong>
+                    </div>
+                    <dl>
+                        <div><dt>Seed</dt><dd id="seedValue">—</dd></div>
+                        <div><dt>Tick</dt><dd id="tickValue">0</dd></div>
+                        <div><dt>Commands</dt><dd id="commandValue">0</dd></div>
+                        <div><dt>Contacts</dt><dd id="contactValue">0</dd></div>
+                    </dl>
+                    <button id="exportReplayButton" type="button">Download replay JSON</button>
+                </section>
+
+                <details class="control-reference">
+                    <summary>Keyboard controls</summary>
+                    <p><b>WASD</b> move · <b>Mouse</b> point · <b>Space/J/K/L</b> palm/top/back/fist · <b>Z/X</b> English · <b>Q</b> lift · <b>E</b> drive · <b>R</b> Ghost match · <b>F</b> feed · <b>C</b> camera.</p>
+                </details>
+            </aside>
+        </section>
+    </main>
+
+    <footer class="lab-footer">
+        <span>Accuracy slice 01 · The Wall BallisticsCore</span>
+        <span>Physics decides the shot. The UI explains why.</span>
+    </footer>
+</body>
+</html>
