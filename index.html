@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC One-Wall Handball Prototype</title>
+    <meta name="description" content="A standalone NYC-style one-wall handball prototype with serving, rally scoring, spin, and a practice AI.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script defer src="app.js"></script>
+</head>
+<body>
+    <main class="page-shell">
+        <section class="hero-panel">
+            <p class="eyebrow">Standalone Project</p>
+            <h1>NYC One-Wall Handball</h1>
+            <p class="lede">A playable rally prototype focused on feel first: serve flow, front-wall rules, first-bounce faults, spin, and a scrappy practice opponent.</p>
+
+            <div class="score-strip" aria-label="Current match score">
+                <article class="score-card">
+                    <span>You</span>
+                    <strong id="playerScore">0</strong>
+                </article>
+                <article class="score-card">
+                    <span>Wall Ghost</span>
+                    <strong id="aiScore">0</strong>
+                </article>
+                <article class="score-card status-card">
+                    <span>Rally</span>
+                    <strong id="rallyCount">0</strong>
+                </article>
+                <article class="score-card status-card">
+                    <span>Shot</span>
+                    <strong id="shotMode">Flat</strong>
+                </article>
+            </div>
+        </section>
+
+        <section class="play-panel">
+            <div class="canvas-wrap">
+                <canvas id="gameCanvas" width="960" height="600" aria-label="NYC one-wall handball court"></canvas>
+                <div class="hud">
+                    <p id="statusLine">Press Serve to start the point.</p>
+                    <p id="detailLine">Movement: WASD or arrows. Swing: Space. Hold Z/X for english, Shift for extra pace.</p>
+                    <p id="metaLine">Race to 11. Select a shot with 1 = Flat, 2 = Lob, 3 = Kill.</p>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <button id="serveButton" type="button">Serve</button>
+                <button id="resetButton" type="button">Reset Match</button>
+            </div>
+        </section>
+
+        <aside class="info-panel">
+            <article class="info-card">
+                <p class="card-kicker">Controls</p>
+                <ul>
+                    <li><strong>Move:</strong> `WASD` or arrow keys</li>
+                    <li><strong>Swing:</strong> `Space`</li>
+                    <li><strong>Shot select:</strong> `1` flat, `2` lob, `3` kill</li>
+                    <li><strong>Spin:</strong> hold `Z` for left english, `X` for right english</li>
+                    <li><strong>Power:</strong> hold `Shift` while swinging</li>
+                    <li><strong>Serve / Reset:</strong> `R` / `Backspace`</li>
+                </ul>
+            </article>
+
+            <article class="info-card">
+                <p class="card-kicker">Prototype Rules</p>
+                <ul>
+                    <li>Serves must hit the front wall first.</li>
+                    <li>The first serve bounce must land beyond the short line and before the back line.</li>
+                    <li>During rallies, returns must reach the front wall before the second bounce.</li>
+                    <li>Miss the front wall, hit out, or let it die twice and you give up the point.</li>
+                    <li>First side to 11 wins the match.</li>
+                </ul>
+            </article>
+
+            <article class="info-card">
+                <p class="card-kicker">Build Intent</p>
+                <p>This extracted project is tuned as a feel-first prototype, not a full simulation. The goal is to validate pacing, spacing, and shot expression before bigger production work.</p>
+            </article>
+        </aside>
+    </main>
+</body>
+</html>
