@@ -158,4 +158,3 @@ Do not ask for a vague endorsement. Ask for criticism, schedule a playable sessi
 - [USHA: 1-Wall Servers Must Learn How to Handle the Angles](https://www.ushandball.org/1-wall-servers-must-learn-how-to-handle-the-angles/)
 - [2025 USHA National One-Wall Championships](https://www.ushandball.org/64th-usha-national-one-wall-championships/)
 - [2026 WPH U.S. Open final report](https://wphlive.tv/tavo-dominates-the-2026-u-s-open-1-wall-handball-championships/)
-
