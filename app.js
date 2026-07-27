@@ -86,6 +86,29 @@ let audioContext = null;
 let bannerTimer = null;
 let canvasSize = { width: 960, height: 600, dpr: 1 };
 const reducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+const GAMEPLAY_SEED = 0x57414c4c;
+
+function createSeededRandom(seed = GAMEPLAY_SEED) {
+  let value = (Number(seed) >>> 0) || 1;
+  return {
+    next() {
+      value ^= value << 13;
+      value ^= value >>> 17;
+      value ^= value << 5;
+      value >>>= 0;
+      return value / 0x100000000;
+    },
+    reset(nextSeed = GAMEPLAY_SEED) {
+      value = (Number(nextSeed) >>> 0) || 1;
+    },
+    state() {
+      return value >>> 0;
+    },
+  };
+}
+
+const gameplayRng = createSeededRandom();
+const gameplayRandom = () => gameplayRng.next();
 
 const COURT = {
   left: 208,
@@ -1592,6 +1615,7 @@ function parkBallAtServer() {
 }
 
 function resetMatch() {
+  gameplayRng.reset();
   state.training = null;
   ui.trainingHud.hidden = true;
   resetCharge();
@@ -1891,7 +1915,7 @@ function getShotProfile(actor, options = {}) {
   }
 
   const weights = getAiShotWeights();
-  const roll = Math.random();
+  const roll = gameplayRandom();
   let threshold = 0;
   for (const [shotKey, weight] of Object.entries(weights)) {
     threshold += weight;
@@ -2141,7 +2165,7 @@ function getContactQuality(actor, shotKey = actor.id === 'player' ? state.select
 
 function getAiAimBias(actor, serve = false) {
   if (serve) {
-    return (Math.random() - 0.5) * 0.42;
+    return (gameplayRandom() - 0.5) * 0.42;
   }
   const difficulty = DIFFICULTIES[state.difficulty];
   const playerOffset = clamp((state.player.x - COURT.centerX) / 250, -1, 1);
@@ -2150,7 +2174,7 @@ function getAiAimBias(actor, serve = false) {
     ? clamp((actor.x - COURT.centerX) / 360, -0.22, 0.22)
     : 0;
   const randomRange = state.difficulty === 'easy' ? 0.46 : state.difficulty === 'medium' ? 0.28 : 0.16;
-  return clamp(openCourt + downLine + (Math.random() - 0.5) * randomRange, -0.94, 0.94);
+  return clamp(openCourt + downLine + (gameplayRandom() - 0.5) * randomRange, -0.94, 0.94);
 }
 
 function getStepInTransfer(actor, balance) {
@@ -2174,7 +2198,7 @@ function strikeBall(actor, options = {}) {
     ? Math.max(options.charge ?? 0.3, state.input.power)
     : clamp(
         (state.difficulty === 'hard' ? 0.72 : state.difficulty === 'medium' ? 0.58 : 0.42)
-          + (Math.random() - 0.5) * 0.24,
+          + (gameplayRandom() - 0.5) * 0.24,
         0.14,
         0.94
       );
@@ -2221,12 +2245,12 @@ function strikeBall(actor, options = {}) {
   const wideAimRisk = Math.pow(Math.abs(aimBias), 1.65)
     * chargeGrade.wideRisk
     * (0.035 + Math.max(0, shotProfile.aimScale - 0.85) * 0.045);
-  const placementError = (Math.random() - 0.5)
+  const placementError = (gameplayRandom() - 0.5)
     * 2
     * (contact.aimError + advancedRisk + wideAimRisk);
   let spin = actor.id === 'player'
     ? spinBiasFromKeys() * shotProfile.spinScale
-    : (Math.random() - 0.5) * 0.9;
+    : (gameplayRandom() - 0.5) * 0.9;
   if (!options.serve && Math.abs(spin) < 0.12 && ['slice', 'backhand'].includes(shotKey)) {
     spin = (aimBias || (actor.id === 'player' ? 0.65 : -0.65)) * shotProfile.spinScale;
   }
@@ -2279,7 +2303,7 @@ function strikeBall(actor, options = {}) {
   ball.chargeGrade = chargeGrade.key;
   ball.crack = false;
   ball.flightAge = 0;
-  ball.knuckleSeed = shotKey === 'fist' ? Math.random() * Math.PI * 2 : 0;
+  ball.knuckleSeed = shotKey === 'fist' ? gameplayRandom() * Math.PI * 2 : 0;
   ball.trail = [];
   state.lastShotLabel = ball.shotType;
 

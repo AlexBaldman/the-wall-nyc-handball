@@ -91,6 +91,8 @@ Turn the vertical slice into a game players want to finish and replay.
 
 Create one high-quality court with third-person gameplay and polished mechanics.
 
+The implementation contract for this phase is the [accuracy-first 3D gameplay plan](accuracy-first-3d-gameplay-plan.md). The shipped named-shot controls remain a comparison build; the 3D slice makes movement, preparation, wall intention, and physical hand contact authoritative.
+
 **Features**
 
 - Third-person camera with lock-on assist
@@ -147,15 +149,19 @@ Expand content and progression.
 - **Animation:** start with a minimal set and expand once timing windows are stable.
 - **Networking (if online):** design for rollback early if high-level competitive play is a target.
 
-## Control Scheme (Starting Point)
+## Control Scheme (3D Target)
 
-- Left Stick / WASD: movement
-- Right Stick / Mouse: shot direction bias
-- Strike button: hit ball
-- Modifier 1: finesse/placement mode
-- Modifier 2: power mode
+- Left Stick / `WASD`: movement at all times
+- Right Stick / mouse: continuous wall intention
+- `A / Cross`: open-palm control contact
+- `X / Square`: topspin brush
+- `B / Circle`: backspin slice
+- `Y / Triangle`: fist / hard contact
+- hold any contact button to prepare and build pace; release it to swing
+- `LB / RB`: left / right side english
+- `LT / RT`: lift / lob intent and drive / kill intent
 
-Combine button timing + directional input + modifier to generate shot variety without overwhelming players.
+The buttons choose technique and intent, not a guaranteed result. Backhand, pass, kill, roller, and exact spin emerge from positioning, contact height, hold time, modifiers, body transfer, wall intention, and the hand-ball impulse. They are classified after contact.
 
 ## Milestone Checklist
 

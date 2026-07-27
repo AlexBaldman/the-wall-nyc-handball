@@ -11,6 +11,9 @@ const fail = (message) => {
 const html = read('index.html');
 const css = read('style.css');
 const app = read('app.js');
+const labHtml = read('lab.html');
+const labCss = read('lab.css');
+const labApp = read('src/labs/ball-lab.js');
 
 new vm.Script(app, { filename: 'app.js' });
 
@@ -35,6 +38,35 @@ for (const path of localAssets) {
   const asset = resolve(root, path.replace(/^\.\//, ''));
   if (!statSync(asset).isFile()) {
     fail(`Missing local asset: ${path}`);
+  }
+}
+
+const labIds = [...labHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+const duplicateLabIds = [...new Set(labIds.filter((id, index) => labIds.indexOf(id) !== index))];
+if (duplicateLabIds.length) {
+  fail(`Duplicate Accuracy Lab ids: ${duplicateLabIds.join(', ')}`);
+}
+
+const labBindings = [
+  ...labApp.matchAll(/document\.getElementById\(['"]([^'"]+)['"]\)/g),
+].map((match) => match[1]);
+const listedLabBindings = [
+  ...labApp.matchAll(/^\s{4}'([^']+)',$/gm),
+].map((match) => match[1]);
+const missingLabIds = [...new Set(
+  [...labBindings, ...listedLabBindings].filter((id) => !labIds.includes(id)),
+)];
+if (missingLabIds.length) {
+  fail(`Accuracy Lab references missing HTML ids: ${missingLabIds.join(', ')}`);
+}
+
+const labAssets = [...labHtml.matchAll(/\s(?:href|src)="([^"]+)"/g)]
+  .map((match) => match[1])
+  .filter((path) => !/^(?:https?:|#|data:)/.test(path));
+for (const path of labAssets) {
+  const asset = resolve(root, path.replace(/^\.\//, ''));
+  if (!statSync(asset).isFile()) {
+    fail(`Missing local Accuracy Lab asset: ${path}`);
   }
 }
 
@@ -65,8 +97,28 @@ for (const system of requiredSystems) {
 if (!css.includes('@media (prefers-reduced-motion: reduce)')) {
   fail('Reduced-motion styling is missing.');
 }
+if (!labCss.includes('@media (prefers-reduced-motion: reduce)')) {
+  fail('Accuracy Lab reduced-motion styling is missing.');
+}
+
+for (const modulePath of [
+  'src/sim/types.js',
+  'src/sim/court.js',
+  'src/sim/random.js',
+  'src/sim/replay.js',
+  'src/sim/rules.js',
+  'src/sim/ballistics.js',
+  'src/labs/ball-lab.js',
+  'vendor/three.core.min.js',
+  'vendor/three.module.min.js',
+]) {
+  if (!statSync(resolve(root, modulePath)).isFile()) {
+    fail(`Missing 3D simulation module: ${modulePath}`);
+  }
+}
 
 console.log(
   `Smoke check passed: ${htmlIds.length} unique ids, ${referencedIds.length} DOM bindings, `
-    + `${requiredShots.length} shots, ${localAssets.length} local assets.`
+    + `${requiredShots.length} shots, ${localAssets.length} match assets, `
+    + `${labIds.length} Accuracy Lab ids, ${labAssets.length} lab assets.`
 );

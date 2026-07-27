@@ -4,9 +4,36 @@ This is the extracted standalone version of the American handball concept that h
 
 [Play the current GitHub Pages test build](https://alexbaldman.github.io/the-wall-nyc-handball/)
 
+[Enter the true-scale 3D Accuracy Lab](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html)
+
 ## What it is
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
+
+Version `0.4.0` adds a separate 3D Accuracy Lab while preserving the shipped 2.5D match for comparison. The lab currently includes:
+
+- true SI-unit court geometry: 20′ × 16′ wall, 16′ short line, 25′ service markers, and 34′ long line
+- the physical 1⅞″, 61 g one-wall ball plus a visible halo that never enlarges its collision shape
+- a custom 240 Hz BallisticsCore with quadratic drag, Magnus force, swept floor/wall collision, friction, spin exchange, and physical crack-seam response
+- an interactive USHA drop test that reproduces a 49.8″ rebound from a 70″ free fall
+- a swept hand collider with a directional striking face: the ball only leaves when the hand and ball paths physically intersect, while palm orientation prevents billiard-ball edge launches
+- hold-to-prepare and release-to-swing controls with a broad power plateau instead of a one-frame timing meter
+- open palm, topspin, backspin, and fist contact families plus left/right English, lift, and drive modifiers
+- bounded automatic hand tracking whose exact contribution is recorded with the contact
+- mouse wall intention, keyboard control, and standard two-stick/face-button gamepad input
+- Tactical, Player, and Courtside perspective cameras with optical zoom
+- an adjustable 55–110% court-tempo clock; 100% is physical real time and lower settings slow presentation without changing geometry or material coefficients
+- a complete first-to-5 sparring match against Wall Ghost with server-only scoring, side outs, two serves, legal service-box checks, floor-before-wall downs, and second-bounce winners
+- a same-physics opponent that moves and contacts through its own actor and swept hand instead of teleporting the ball
+- perception-limited opponent reads sampled at 20 Hz, delayed by roughly 100 ms, perturbed with seeded noise, and projected forward through the same ballistics model
+- live contact explanations for clean spacing, jams, reaches, air swings, floor-before-wall downs, wall height, and first bounce
+- versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data plus replay JSON export
+- deterministic competitive randomness in both the new lab and the preserved match baseline
+- automated geometry, drop, spin, tunneling, swept-hand, service/scoring, serialization, player/Ghost serve, delayed-perception, WebGL, interaction, and responsive-layout checks
+
+The 3D lab is now the first complete accuracy-first point, while the shipped 2.5D game remains the richer content baseline. The next gate is repeated human tuning of movement, contact forgiveness, rally rhythm, and opponent difficulty before migrating career content.
+
+The next presentation pass is now specified in the [visual system and Day / Night art direction](docs/visual-day-night-art-direction.md): a brighter, cooler Day court and a purpose-built floodlit Night court, both driven by shared semantic color roles and held to the same competitive-readability and deterministic-simulation contract.
 
 Current build includes:
 
@@ -53,6 +80,21 @@ Current build includes:
 
 ## Controls
 
+### 3D Accuracy Lab
+
+- `WASD`: move
+- mouse: point at the wall
+- hold/release `Space`, `J`, `K`, or `L`: open palm, topspin, backspin, or fist
+- `Z` / `X`: left or right English
+- `Q` / `E`: lift or drive modifier
+- `R`: start the Ghost match or next point
+- `F`: interrupt with a solo practice feed
+- `C`: cycle Tactical, Player, and Courtside cameras
+- `Backspace`: reset the lab
+- `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
+
+### Preserved 2.5D match
+
 - `WASD` or arrow keys: move
 - tap `Space` for a lower-pace control touch, or hold and release in the shot-specific green window for clean power
 - `1`–`7`: select palm, slice, fist, backhand, kill, roller, or lob
@@ -92,7 +134,11 @@ Supported controllers receive contact, wall-impact, and point-result rumble wher
 
 ## Local development
 
-This project is static HTML/CSS/JS, so any simple local server works.
+Install the pinned development dependencies, then start the static server:
+
+```bash
+npm install
+```
 
 ```bash
 npm run serve
@@ -100,13 +146,19 @@ npm run serve
 
 Then open `http://127.0.0.1:4173`.
 
-Run the dependency-free validation suite before publishing:
+Run the deterministic validation suite before publishing:
 
 ```bash
 npm run check
 ```
 
-The smoke test checks JavaScript syntax, unique HTML IDs, every DOM binding, local assets, shot wiring, reduced-motion coverage, and the presence of the core physics and officiating systems.
+`npm run check` covers JavaScript syntax, exact geometry, official drop response, high-speed tunneling, spin direction, directional hand collision, official serve/scoring rules, replay serialization, unique HTML IDs, DOM bindings, local assets, reduced motion, shot wiring, and the existing officiating systems.
+
+With the local server running, the optional browser suite verifies WebGL, the official drop interaction, player and Ghost hand contacts, a regulation AI serve, delayed perception, replayable AI commands, tempo/camera/coefficient controls, the preserved match page, and desktop/mobile layouts:
+
+```bash
+npm run test:lab-runtime
+```
 
 ## Test deployment
 
@@ -117,7 +169,13 @@ GitHub Actions validates the game, stages only the playable static assets, and d
 - `index.html`: page structure and HUD
 - `style.css`: standalone visual design
 - `app.js`: game loop, controls, ball physics, rules, and rendering
-- `package.json`: dependency-free local validation and serving commands
+- `lab.html` / `lab.css`: separate true-scale 3D Accuracy Lab
+- `src/sim/`: serializable contracts, official measurements, seeded randomness, replay records, and BallisticsCore
+- `src/labs/ball-lab.js`: Three.js scene, hand/control experiment, cameras, UI, and telemetry
+- `vendor/`: pinned browser runtime for Three.js plus its MIT license
+- `package.json`: pinned dependencies, validation, browser QA, and serving commands
+- `scripts/physics.test.mjs`: golden geometry, ballistics, contact, and replay tests
+- `scripts/lab-runtime.mjs`: WebGL, interaction, preserved-page, and responsive browser QA
 - `scripts/smoke.mjs`: structural smoke test
 - `.github/workflows/pages.yml`: GitHub Pages validation and deployment
 - `CHANGELOG.md`: shipped gameplay and presentation milestones
@@ -125,5 +183,7 @@ GitHub Actions validates the game, stages only the playable static assets, and d
 - `docs/fun-game-roadmap.md`: prioritized game-feel and presentation work
 - `docs/court-geometry-and-camera-study.md`: official geometry mapping, venue references, and match-camera findings
 - `docs/control-and-training-design.md`: tennis-game inspiration, handball mappings, controller layout, and drill design
+- `docs/accuracy-first-3d-gameplay-plan.md`: accuracy-first 3D simulation, minimal-input controls, engine bake-off, playtest gates, and staged implementation
+- `docs/visual-day-night-art-direction.md`: SetScope-informed visual tokens, brighter Day color script, floodlit Night rig, readability gates, and implementation order
 - `docs/avatar-creator-design.md`: inclusive character-creator scope, option taxonomy, presets, and multiplayer-safe data model
 - `docs/champion-playtest-protocol.md`: expert recruitment, interview script, instrumented session, and evidence rules

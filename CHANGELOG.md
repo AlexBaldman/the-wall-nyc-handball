@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0 — Make the contact
+
+### True-scale 3D lab
+
+- added a separate Three.js Accuracy Lab without replacing the playable 2.5D match
+- encoded the official one-wall court and ball in meters, kilograms, and seconds
+- added Tactical, Player, and Courtside perspective cameras with optical zoom
+- added a physical-size ball with a render-only readability halo, regulation line labels, a human-scale graybox player, chain-link surrounds, and comic/graffiti court art
+
+### Physics and control
+
+- added a custom 240 Hz BallisticsCore with quadratic drag, Magnus force, swept floor/wall collision, friction, spin exchange, and crack-seam response
+- calibrated the floor response to a 49.8-inch rebound from the official 70-inch free fall
+- added a swept moving-hand collider with bounded, recorded hand-tracking assistance and a directional striking face that suppresses spherical edge-launch artifacts
+- added hold-to-prepare/release-to-swing controls with open palm, topspin, backspin, and fist techniques
+- added left/right English, lift, and drive modifiers whose impulses combine at contact instead of choosing canned trajectories
+- added accurate down feedback when a return touches the floor before reaching the front wall
+- added a 55–110% court-tempo control that time-dilates presentation without changing physical dimensions or collision coefficients
+
+### First complete 3D point
+
+- added a first-to-5 Wall Ghost match with server-only scoring, side outs, two service attempts, short/long/outside faults, second-bounce winners, and service rotation
+- added separate player and opponent actors, hands, movement, preparation, contact, and replayable controller commands
+- added opponent perception sampled at 20 Hz with seeded measurement noise and roughly 100 ms of delay
+- added a small opponent-side physics forecast that anticipates floor and wall response using only delivered observations
+- added a continuous preparation-to-contact-to-follow-through hand path for low pickups and serves
+- added a match ribbon, service possession, rally length, turn guidance, opponent-read telemetry, and match-aware camera centering
+
+### Architecture and instrumentation
+
+- added versioned, serializable command, ball, contact, snapshot, and replay records
+- replaced competitive `Math.random()` calls in the preserved match with a resettable seeded source
+- added replay JSON export plus an in-lab contact replay viewer
+- pinned and vendored Three.js `0.185.1` for static GitHub Pages deployment
+
+### Verification
+
+- added golden tests for official dimensions, drop rebound, wall response, tunneling, spin direction, moving-hand contact, server-only scoring, side outs, two serves, seeded randomness, and replay serialization
+- added browser QA for WebGL startup, drop-test interaction, player contact, Ghost contact and legal serve, delayed observations, AI replay commands, tempo/camera/coefficient controls, preserved-match loading, and mobile overflow
+- added desktop and phone reference captures for the Accuracy Lab
+
 ## 0.3.0 — Rhythm and depth
 
 ### Playability

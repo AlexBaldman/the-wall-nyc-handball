@@ -1,5 +1,7 @@
 # Control and Training Design
 
+> This file documents the shipped 2.5D vertical slice. Its direct named-outcome buttons are now a prototype baseline, not the target production control scheme. The next-generation direction is the [accuracy-first 3D gameplay plan](accuracy-first-3d-gameplay-plan.md): tennis-style contact buttons, hold-to-build preparation and pace, continuous wall intention, physical hand contact, and outcomes assigned after contact.
+
 ## What the strongest tennis games teach
 
 [TopSpin 2K25's official manual](https://cdn.2k.com/topspin/topspin-2k25/manuals/ps5/TopSpin2K25_Online_Manual_%28English%29_PS5_%28For_SG.HK%29.pdf) separates shot selection, directional aiming, timing, and power. A tap favors control; committed power increases pressure and unforced-error risk. Flat, topspin, and slice are separate inputs instead of cosmetic ball trails.

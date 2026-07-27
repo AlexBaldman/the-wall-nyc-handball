@@ -34,8 +34,10 @@ jobs:
       - name: Stage static site
         run: |
           mkdir _site
-          cp index.html style.css app.js _site/
+          cp index.html style.css app.js lab.html lab.css _site/
           cp -R outputs _site/outputs
+          cp -R src _site/src
+          cp -R vendor _site/vendor
           touch _site/.nojekyll
 
       - name: Configure Pages

@@ -47,6 +47,8 @@ Implemented camera vocabulary:
 
 The `Player` view is now the default because the previous full-court view made the game read like a fast tabletop simulation. Its affine foreshortening does not alter world coordinates, collision tests, or the official court ratios. The next true-3D prototype should keep the same camera contract: wall edges and the live bounce remain readable, while the near player has enough scale to communicate footwork and hand preparation.
 
+The short line can look too deep in the current canvas even though its simulation position is essentially the official `16 / 34` wall-to-long-line ratio; the service markers similarly sit at `25 / 34`. This is a perspective problem caused by affine vertical compression, screen-space actor scale, and weak depth cues. The 3D version must keep the official coordinates and correct perception through a real perspective camera, human-scale actors, floor texture, shadows, line width, and visible run-off space. The [accuracy-first 3D gameplay plan](accuracy-first-3d-gameplay-plan.md) defines the calibration view and acceptance tests.
+
 The Rhythm Lab exposes camera depth independently from camera zoom. Depth changes vertical compression and foreground scale; zoom changes crop. Keeping those controls separate makes it possible to test a television-style tactical view against a tennis-style player view without contaminating physics feedback.
 
 The art direction uses pixel-snapped actor geometry for 16-bit readability, then adds modern comic ink, flat color blocks, converging floor guides, speed lines, square particles, halftone/scanline texture, and graffiti-influenced impact typography.
