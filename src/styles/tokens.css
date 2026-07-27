@@ -1,0 +1,52 @@
+:root {
+    color-scheme: dark;
+
+    /* Foundation */
+    --font-display: "Barlow Condensed", sans-serif;
+    --font-ui: "Space Grotesk", sans-serif;
+    --touch-target: 44px;
+    --radius-control: 6px;
+    --radius-panel: 8px;
+    --motion-fast: 150ms;
+    --motion-page: 240ms;
+
+    /* Neutral court chassis */
+    --surface-app: #050b12;
+    --surface-deep: #07131d;
+    --surface-panel: #0a1924;
+    --surface-raised: #102534;
+    --border-subtle: rgba(219, 236, 239, 0.16);
+    --border-strong: rgba(219, 236, 239, 0.28);
+    --text-primary: #f5f3e8;
+    --text-secondary: #9eb0b9;
+    --shadow-deep: rgba(0, 0, 0, 0.48);
+
+    /* Semantic signals shared by match and lab */
+    --accent-action: #ff9f32;
+    --accent-hot: #ff5a34;
+    --accent-data: #75e6de;
+    --status-success: #d6f55f;
+    --status-danger: #ff4e88;
+    --status-special: #a777ff;
+    --focus-ring: var(--status-success);
+
+    /* Compatibility aliases while page styles migrate to semantic names */
+    --night: var(--surface-app);
+    --night-blue: var(--surface-deep);
+    --blue-black: var(--surface-deep);
+    --surface: var(--surface-panel);
+    --panel: var(--surface-panel);
+    --panel-raised: var(--surface-raised);
+    --line: var(--border-subtle);
+    --line-bright: var(--border-strong);
+    --ink: var(--text-primary);
+    --muted: var(--text-secondary);
+    --orange: var(--accent-action);
+    --orange-hot: var(--accent-hot);
+    --hot: var(--accent-hot);
+    --aqua: var(--accent-data);
+    --lime: var(--status-success);
+    --pink: var(--status-danger);
+    --purple: var(--status-special);
+    --shadow: var(--shadow-deep);
+}

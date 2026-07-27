@@ -28,6 +28,7 @@ import {
   createPlayerCommand,
   createSimulationSnapshot,
 } from '../sim/types.js';
+import { applyDeadzone, findGamepad, playGamepadRumble } from '../platform/gamepad.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -2055,6 +2056,11 @@ function runDropTest() {
 
 function resetLab({ resetSeed = true } = {}) {
   if (resetSeed) rng.setState(SEED);
+  state.tick = 0;
+  state.simulationTime = 0;
+  accumulator = 0;
+  lastFrameTime = performance.now();
+  lastUiUpdate = 0;
   state.mode = 'practice';
   state.match = createMatchState();
   state.ball = createBallState({
@@ -2068,6 +2074,7 @@ function resetLab({ resetSeed = true } = {}) {
   state.ai.velocity = { x: 0, y: 0, z: 0 };
   state.ai.preparation = 0;
   state.ai.preparing = false;
+  state.ai.prepareStartedAt = 0;
   state.ai.plannedReleaseTick = null;
   state.ai.targetPosition = { x: 0.62, z: COURT.longLine - 0.45 };
   state.ai.observation = null;
@@ -2076,18 +2083,29 @@ function resetLab({ resetSeed = true } = {}) {
   state.ai.lastCommandDigest = '';
   state.hand.position = restingHandPosition(0);
   state.hand.previousPosition = { ...state.hand.position };
+  state.hand.velocity = { x: 0, y: 0, z: 0 };
+  state.hand.active = false;
   state.aiHand.position = aiRestingHandPosition(0);
   state.aiHand.previousPosition = { ...state.aiHand.position };
+  state.aiHand.velocity = { x: 0, y: 0, z: 0 };
+  state.aiHand.active = false;
   state.swing = null;
   state.aiSwing = null;
+  state.lastHandContactTick = -1000;
   state.lastHandContact = null;
   state.lastWallContact = null;
   state.wallContactsAtLastHand = 0;
+  state.contacts = 0;
+  state.feeds = 0;
   state.dropTracking = null;
   state.trail.length = 0;
   state.history.length = 0;
   state.replayPlayback = null;
+  state.hintProgress = 0;
+  state.pendingMissCheck = false;
   input.activeTechnique = null;
+  input.prepareStartedAt = 0;
+  input.gamepadButtons = [];
   input.commandSequence = 0;
   input.lastCommandDigest = '';
   recorder = createReplayRecorder({ seed: SEED });
@@ -2422,12 +2440,8 @@ function syncTelemetryUi(timestamp) {
 }
 
 function pollGamepad() {
-  const pads = navigator.getGamepads?.() ?? [];
-  let gamepad = input.gamepadIndex === null ? null : pads[input.gamepadIndex];
-  if (!gamepad) {
-    gamepad = Array.from(pads).find(Boolean) ?? null;
-    input.gamepadIndex = gamepad?.index ?? null;
-  }
+  const gamepad = findGamepad(input.gamepadIndex);
+  input.gamepadIndex = gamepad?.index ?? null;
   if (!gamepad) {
     input.move.x = 0;
     input.move.z = 0;
@@ -2461,12 +2475,6 @@ function pollGamepad() {
   input.modifiers.lift = (gamepad.buttons[6]?.value ?? 0) > 0.35 || input.keys.has('KeyQ');
   input.modifiers.drive = (gamepad.buttons[7]?.value ?? 0) > 0.35 || input.keys.has('KeyE');
   if (JSON.stringify(input.modifiers) !== previousModifiers) syncTechniqueUi();
-}
-
-function applyDeadzone(value, deadzone = 0.16) {
-  const absolute = Math.abs(value);
-  if (absolute <= deadzone) return 0;
-  return Math.sign(value) * (absolute - deadzone) / (1 - deadzone);
 }
 
 function keyboardEnglish() {
@@ -2524,15 +2532,12 @@ function playImpact(frequency, gainValue) {
 }
 
 function rumble(intensity, milliseconds) {
-  const pads = navigator.getGamepads?.() ?? [];
-  const gamepad = input.gamepadIndex === null ? null : pads[input.gamepadIndex];
-  const actuator = gamepad?.vibrationActuator;
-  if (!actuator?.playEffect) return;
-  actuator.playEffect('dual-rumble', {
+  const gamepad = findGamepad(input.gamepadIndex);
+  playGamepadRumble(gamepad, {
     duration: milliseconds,
     strongMagnitude: intensity,
     weakMagnitude: intensity * 0.72,
-  }).catch(() => {});
+  });
 }
 
 function resize() {

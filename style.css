@@ -1,20 +1,3 @@
-:root {
-    --night: #050b12;
-    --night-blue: #071826;
-    --surface: #0a1d2b;
-    --surface-raised: #102736;
-    --line: rgba(207, 227, 235, 0.16);
-    --line-bright: rgba(207, 227, 235, 0.28);
-    --ink: #f2f4ed;
-    --muted: #a9bac2;
-    --orange: #ffb23e;
-    --orange-hot: #ff6a2a;
-    --aqua: #7de4dc;
-    --lime: #d7f36a;
-    --pink: #ff4d83;
-    --shadow: rgba(0, 0, 0, 0.48);
-}
-
 *,
 *::before,
 *::after {
@@ -79,7 +62,7 @@ button:focus-visible,
 a:focus-visible,
 canvas:focus-visible,
 summary:focus-visible {
-    outline: 3px solid var(--lime);
+    outline: 3px solid var(--focus-ring);
     outline-offset: 3px;
 }
 

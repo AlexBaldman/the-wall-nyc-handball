@@ -6,6 +6,12 @@ on:
       - main
       - "agent/**"
   workflow_dispatch:
+    inputs:
+      deploy_pages:
+        description: Deploy this branch to the shared GitHub Pages playtest URL
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -49,6 +55,7 @@ jobs:
           path: _site
 
   deploy:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.deploy_pages)
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

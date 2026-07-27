@@ -152,7 +152,7 @@ Run the deterministic validation suite before publishing:
 npm run check
 ```
 
-`npm run check` covers JavaScript syntax, exact geometry, official drop response, high-speed tunneling, spin direction, directional hand collision, official serve/scoring rules, replay serialization, unique HTML IDs, DOM bindings, local assets, reduced motion, shot wiring, and the existing officiating systems.
+`npm run check` covers JavaScript syntax, shared platform behavior, the official 2.5D court projection, exact 3D geometry, official drop response, high-speed tunneling, spin direction, directional hand collision, official serve/scoring rules, replay serialization, unique HTML IDs, DOM bindings, local assets, reduced motion, shot wiring, and the existing officiating systems.
 
 With the local server running, the optional browser suite verifies WebGL, the official drop interaction, player and Ghost hand contacts, a regulation AI serve, delayed perception, replayable AI commands, tempo/camera/coefficient controls, the preserved match page, and desktop/mobile layouts:
 
@@ -162,19 +162,26 @@ npm run test:lab-runtime
 
 ## Test deployment
 
-GitHub Actions validates the game, stages only the playable static assets, and deploys them to GitHub Pages. Pushes to `main` and `agent/**` produce a test deployment; the workflow can also be run manually.
+GitHub Actions validates and stages the game on pushes to `main` and `agent/**`. Only `main` deploys to the shared GitHub Pages URL automatically. A feature branch can replace that shared playtest intentionally through a manual workflow run with `deploy_pages` enabled.
 
 ## Project layout
 
 - `index.html`: page structure and HUD
 - `style.css`: standalone visual design
-- `app.js`: game loop, controls, ball physics, rules, and rendering
+- `app.js`: thin browser entrypoint for the preserved match
+- `src/game/match-app.js`: preserved 2.5D match coordinator, controls, AI, Canvas rendering, and content systems
+- `src/game/match-content.js`: static shots, opponents, drills, avatars, and timing profiles
+- `src/game/match-environment.js`: 2.5D court projection, physics tuning, cameras, rhythm presets, and venue palettes
 - `lab.html` / `lab.css`: separate true-scale 3D Accuracy Lab
+- `src/platform/`: shared optional browser capability adapters such as Gamepad input and rumble
+- `src/presentation/`: projections from official game measurements into renderer coordinates
 - `src/sim/`: serializable contracts, official measurements, seeded randomness, replay records, and BallisticsCore
+- `src/styles/tokens.css`: semantic visual foundation shared by both playable experiences
 - `src/labs/ball-lab.js`: Three.js scene, hand/control experiment, cameras, UI, and telemetry
 - `vendor/`: pinned browser runtime for Three.js plus its MIT license
 - `package.json`: pinned dependencies, validation, browser QA, and serving commands
 - `scripts/physics.test.mjs`: golden geometry, ballistics, contact, and replay tests
+- `scripts/architecture.test.mjs`: shared platform and official projection contract tests
 - `scripts/lab-runtime.mjs`: WebGL, interaction, preserved-page, and responsive browser QA
 - `scripts/smoke.mjs`: structural smoke test
 - `.github/workflows/pages.yml`: GitHub Pages validation and deployment
@@ -184,6 +191,7 @@ GitHub Actions validates the game, stages only the playable static assets, and d
 - `docs/court-geometry-and-camera-study.md`: official geometry mapping, venue references, and match-camera findings
 - `docs/control-and-training-design.md`: tennis-game inspiration, handball mappings, controller layout, and drill design
 - `docs/accuracy-first-3d-gameplay-plan.md`: accuracy-first 3D simulation, minimal-input controls, engine bake-off, playtest gates, and staged implementation
+- `docs/architecture.md`: branch inventory, runtime ownership, command/snapshot seams, testing pyramid, and deployment guardrails
 - `docs/visual-day-night-art-direction.md`: SetScope-informed visual tokens, brighter Day color script, floodlit Night rig, readability gates, and implementation order
 - `docs/avatar-creator-design.md`: inclusive character-creator scope, option taxonomy, presets, and multiplayer-safe data model
 - `docs/champion-playtest-protocol.md`: expert recruitment, interview script, instrumented session, and evidence rules

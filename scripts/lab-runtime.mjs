@@ -146,6 +146,33 @@ try {
     'Replay should record opponent commands as future multiplayer inputs',
   );
 
+  await page.evaluate(() => {
+    window.__THE_WALL_LAB__.resetLab();
+    window.__THE_WALL_LAB__.startGhostPoint();
+  });
+  await page.waitForFunction(
+    () => {
+      const match = window.__THE_WALL_LAB__.getMatch();
+      return (
+        match.rallyContacts >= 1
+        && match.wallReached
+        && !match.serveInFlight
+      );
+    },
+    null,
+    { timeout: 10000 },
+  );
+  const repeatedGhostServeBounce = await page.evaluate(
+    () => window.__THE_WALL_LAB__.getReplay().contacts.find(
+      (contact) => contact.kind === 'floor',
+    ).position,
+  );
+  assert.ok(
+    Math.abs(repeatedGhostServeBounce.x - ghostServeBounce.position.x) < 1e-9
+      && Math.abs(repeatedGhostServeBounce.z - ghostServeBounce.position.z) < 1e-9,
+    'Resetting to the same seed must reproduce the same Ghost serve bounce',
+  );
+
   await page.click('[data-camera="tactical"]');
   assert.equal(
     await page.locator('[data-camera="tactical"]').evaluate((element) => element.classList.contains('active')),

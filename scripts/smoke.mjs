@@ -1,6 +1,5 @@
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import vm from 'node:vm';
 
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -10,12 +9,19 @@ const fail = (message) => {
 
 const html = read('index.html');
 const css = read('style.css');
-const app = read('app.js');
+const entrypoint = read('app.js');
+const app = read('src/game/match-app.js');
+const matchContent = read('src/game/match-content.js');
 const labHtml = read('lab.html');
 const labCss = read('lab.css');
 const labApp = read('src/labs/ball-lab.js');
 
-new vm.Script(app, { filename: 'app.js' });
+if (!html.includes('<script type="module" src="app.js"></script>')) {
+  fail('The match entrypoint must load as an ES module.');
+}
+if (!entrypoint.includes("import './src/game/match-app.js';")) {
+  fail('The root match entrypoint must stay a thin import boundary.');
+}
 
 const htmlIds = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
 const duplicateIds = [...new Set(htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index))];
@@ -73,7 +79,7 @@ for (const path of labAssets) {
 const requiredShots = ['palm', 'slice', 'fist', 'backhand', 'kill', 'roller', 'lob'];
 const markupShots = [...html.matchAll(/data-shot="([^"]+)"/g)].map((match) => match[1]);
 for (const shot of requiredShots) {
-  if (!markupShots.includes(shot) || !app.includes(`${shot}: {`)) {
+  if (!markupShots.includes(shot) || !matchContent.includes(`${shot}: {`)) {
     fail(`Shot is not wired through markup and simulation: ${shot}`);
   }
 }
@@ -102,6 +108,11 @@ if (!labCss.includes('@media (prefers-reduced-motion: reduce)')) {
 }
 
 for (const modulePath of [
+  'src/game/match-app.js',
+  'src/game/match-content.js',
+  'src/game/match-environment.js',
+  'src/platform/gamepad.js',
+  'src/presentation/court-projection.js',
   'src/sim/types.js',
   'src/sim/court.js',
   'src/sim/random.js',
@@ -109,6 +120,7 @@ for (const modulePath of [
   'src/sim/rules.js',
   'src/sim/ballistics.js',
   'src/labs/ball-lab.js',
+  'src/styles/tokens.css',
   'vendor/three.core.min.js',
   'vendor/three.module.min.js',
 ]) {

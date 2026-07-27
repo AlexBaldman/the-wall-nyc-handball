@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.1 — Consolidate the spine
+
+### Architecture
+
+- moved the preserved 2.5D coordinator under `src/game` and kept a thin stable root entrypoint
+- separated static match/avatar content and environment tuning from the live coordinator
+- centralized Gamepad discovery, analog deadzones, and optional rumble in one browser adapter shared by both playable experiences
+- derived the 2.5D short line, service markers, and six-inch marker length from the official SI-unit court source
+- added shared semantic visual tokens as the implementation seam for the brighter Day / floodlit Night pass
+- documented runtime ownership, command/snapshot flow, branch state, testing layers, and safe future split points
+
+### Delivery and verification
+
+- added architecture tests for browser adapters, bounded rumble, malformed axes, preferred-controller selection, and official court projection
+- reset the simulation tick, time, and frame accumulator with the seed so repeated Wall Ghost serves reproduce exactly
+- changed feature branches to validate without automatically replacing the single shared GitHub Pages playtest
+- retained an explicit manual feature-branch deployment path for intentional playtest updates
+
 ## 0.4.0 — Make the contact
 
 ### True-scale 3D lab

@@ -1,11 +1,12 @@
 {
   "name": "the-wall-nyc-handball",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "description": "An accuracy-first NYC one-wall handball game with a true-scale 3D physics lab.",
   "scripts": {
-    "check": "node --check app.js && node --check src/labs/ball-lab.js && npm run test:physics && npm run test:smoke",
+    "check": "node --check app.js && node --check src/game/match-app.js && node --check src/game/match-content.js && node --check src/game/match-environment.js && node --check src/platform/gamepad.js && node --check src/presentation/court-projection.js && node --check src/labs/ball-lab.js && npm run test:architecture && npm run test:physics && npm run test:smoke",
+    "test:architecture": "node scripts/architecture.test.mjs",
     "test:physics": "node scripts/physics.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",
