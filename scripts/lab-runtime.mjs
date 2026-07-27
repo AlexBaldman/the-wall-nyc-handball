@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.BASE_URL ?? 'http://127.0.0.1:4173';
+const screenshotDirectory = process.env.UPDATE_SCREENSHOTS === '1'
+  ? 'outputs'
+  : join(tmpdir(), 'the-wall-lab-runtime');
+const desktopScreenshot = join(screenshotDirectory, 'accuracy-lab-desktop.png');
+const mobileScreenshot = join(screenshotDirectory, 'accuracy-lab-mobile.png');
+mkdirSync(screenshotDirectory, { recursive: true });
+
 const browser = await chromium.launch({
   headless: true,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
@@ -35,7 +45,7 @@ try {
   assert.equal(await page.locator('#seedValue').textContent(), '0x57414C4C');
 
   await page.screenshot({
-    path: 'outputs/accuracy-lab-desktop.png',
+    path: desktopScreenshot,
     fullPage: true,
   });
 
@@ -212,7 +222,7 @@ try {
   );
   assert.ok(horizontalOverflow <= 1, `Mobile layout overflows horizontally by ${horizontalOverflow}px`);
   await page.screenshot({
-    path: 'outputs/accuracy-lab-mobile.png',
+    path: mobileScreenshot,
     fullPage: true,
   });
 
@@ -227,10 +237,7 @@ try {
     ghostServeBounceFeet: ghostServeBounce.position.z / 0.3048,
     consoleErrors,
     failedRequests,
-    screenshots: [
-      'outputs/accuracy-lab-desktop.png',
-      'outputs/accuracy-lab-mobile.png',
-    ],
+    screenshots: [desktopScreenshot, mobileScreenshot],
   }, null, 2));
 } finally {
   await browser.close();

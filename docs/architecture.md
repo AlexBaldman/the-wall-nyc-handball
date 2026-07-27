@@ -16,24 +16,16 @@ They are not competing implementations that should silently drift forever. The
 Features migrate into the 3D path only after their rules and input contracts are
 explicit.
 
-## Branch audit — July 27, 2026
+## Repository topology — July 27, 2026
 
-The complete repository has one integration branch and one feature branch:
+The gameplay, Rhythm Lab, 3D Accuracy Lab, and architecture consolidation are
+landed together on `origin/main`. The merged feature branch was removed, local
+`main` tracks the same commit, and there are no legacy release branches, tags,
+or linked worktrees to reconcile.
 
-| Ref | Purpose | State |
-| --- | --- | --- |
-| `origin/main` | last landed standalone prototype | stable base |
-| `origin/agent/ship-gameplay-pages` | complete gameplay, Rhythm Lab, and 3D Accuracy Lab | open draft PR into `main` |
-
-There are no additional remote branches, tags, or linked worktrees. The feature
-branch is a clean fast-forward line over `origin/main`; it is the only branch
-that contains work to consolidate.
-
-The local `main` ref was created before the GitHub repository gained its
-`Initialize repository` commit. Its tree is byte-identical to `origin/main`, but
-its commit identity is different. Do not merge that local ref. After the feature
-PR lands, repoint local `main` to `origin/main` and then remove the merged feature
-branch as a separate, explicit cleanup operation.
+New work should use a short-lived branch and pull request. Pull requests validate
+the complete deterministic suite and build the static artifact without changing
+the public playtest. A merge to `main` is the normal production release trigger.
 
 ## Runtime layers
 
@@ -153,15 +145,20 @@ to it incrementally instead of being rewritten all at once.
 
 ## Testing pyramid
 
+- `npm run test:syntax` discovers and parses every first-party JavaScript module
 - `npm run test:architecture` protects shared platform behavior and official
   2.5D projection
+- `npm run test:vendor` proves the deployed Three.js files and license exactly
+  match the pinned package
 - `npm run test:physics` protects SI geometry, ballistics, hand contacts, rules,
   seeded randomness, and replay serialization
 - `npm run test:smoke` protects page/module wiring, assets, DOM bindings, core
   systems, and reduced-motion styles
 - `npm run test:lab-runtime` protects the real WebGL/browser flow, physical
   contacts, AI serve/perception, the preserved match page, and responsive layout
-- `npm run check` is the required fast gate and combines the first three levels
+- `npm test` is the required deterministic gate and combines every non-browser
+  layer
+- `npm run site:stage` creates the exact artifact consumed by GitHub Pages
 
 New pure logic goes into the lowest practical layer. A screenshot or browser
 test does not replace a deterministic unit test.
@@ -169,17 +166,17 @@ test does not replace a deterministic unit test.
 ## Branch and deployment rules
 
 - `main` is the production source branch
-- feature branches validate on every push
+- pull requests validate without deploying
 - only `main` deploys to the shared Pages URL automatically
-- a feature branch may deploy there only through an intentional manual workflow
+- any branch may deploy there only through an intentional manual workflow
   run with `deploy_pages` enabled
 - never force-push `main`
-- do not delete the feature branch until the PR is landed and the Pages build
-  from `main` is verified
+- delete a feature branch only after its PR is landed and the Pages build from
+  `main` is verified
 
 GitHub Pages provides one shared site, not isolated branch previews. Automatic
-deployment from every `agent/**` branch lets the last branch pushed replace the
-public playtest and is therefore intentionally disabled.
+deployment from review branches would let the last push replace the public
+playtest and is therefore intentionally disabled.
 
 ## Architecture guardrails
 
