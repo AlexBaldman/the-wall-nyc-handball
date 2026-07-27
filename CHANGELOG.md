@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Maintenance
+
+- upgraded the GitHub Pages workflow to current Node 24-based official actions
+- changed validation to run on pull requests and isolated workflow concurrency by branch
+- limited Pages write and identity permissions to the deployment job
+- made dependency installation and static-site staging reproducible in CI
+- added automatic first-party syntax discovery and exact vendored Three.js integrity checks
+- updated Playwright to `1.62.0` and classified Three.js as a pinned build-time dependency
+- stopped routine browser QA from rewriting committed visual reference captures
+- removed development-only Accuracy Lab reference captures from the production artifact
+- documented and ignored local QA output directories
+
 ## 0.4.1 — Consolidate the spine
 
 ### Architecture

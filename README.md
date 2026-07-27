@@ -10,7 +10,7 @@ This is the extracted standalone version of the American handball concept that h
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
 
-Version `0.4.0` adds a separate 3D Accuracy Lab while preserving the shipped 2.5D match for comparison. The lab currently includes:
+Version `0.4.1` keeps the content-rich 2.5D match and the true-scale 3D Accuracy Lab as separate experiences on one shared architecture. The lab currently includes:
 
 - true SI-unit court geometry: 20′ × 16′ wall, 16′ short line, 25′ service markers, and 34′ long line
 - the physical 1⅞″, 61 g one-wall ball plus a visible halo that never enlarges its collision shape
@@ -137,7 +137,7 @@ Supported controllers receive contact, wall-impact, and point-result rumble wher
 Install the pinned development dependencies, then start the static server:
 
 ```bash
-npm install
+npm ci
 ```
 
 ```bash
@@ -149,10 +149,10 @@ Then open `http://127.0.0.1:4173`.
 Run the deterministic validation suite before publishing:
 
 ```bash
-npm run check
+npm test
 ```
 
-`npm run check` covers JavaScript syntax, shared platform behavior, the official 2.5D court projection, exact 3D geometry, official drop response, high-speed tunneling, spin direction, directional hand collision, official serve/scoring rules, replay serialization, unique HTML IDs, DOM bindings, local assets, reduced motion, shot wiring, and the existing officiating systems.
+`npm test` covers JavaScript syntax, shared platform behavior, the official 2.5D court projection, exact vendored Three.js assets, 3D geometry, official drop response, high-speed tunneling, spin direction, directional hand collision, official serve/scoring rules, replay serialization, unique HTML IDs, DOM bindings, local assets, reduced motion, shot wiring, and the existing officiating systems.
 
 With the local server running, the optional browser suite verifies WebGL, the official drop interaction, player and Ghost hand contacts, a regulation AI serve, delayed perception, replayable AI commands, tempo/camera/coefficient controls, the preserved match page, and desktop/mobile layouts:
 
@@ -160,9 +160,17 @@ With the local server running, the optional browser suite verifies WebGL, the of
 npm run test:lab-runtime
 ```
 
+Browser-test screenshots go to the operating system’s temporary directory by
+default. Refresh the committed desktop and mobile reference captures only when
+the visual change is intentional:
+
+```bash
+UPDATE_SCREENSHOTS=1 npm run test:lab-runtime
+```
+
 ## Test deployment
 
-GitHub Actions validates and stages the game on pushes to `main` and `agent/**`. Only `main` deploys to the shared GitHub Pages URL automatically. A feature branch can replace that shared playtest intentionally through a manual workflow run with `deploy_pages` enabled.
+GitHub Actions validates every pull request and stages the exact static artifact used by production. Only `main` deploys to the shared GitHub Pages URL automatically. Any branch can replace that shared playtest intentionally through a manual workflow run with `deploy_pages` enabled.
 
 ## Project layout
 
@@ -180,8 +188,11 @@ GitHub Actions validates and stages the game on pushes to `main` and `agent/**`.
 - `src/labs/ball-lab.js`: Three.js scene, hand/control experiment, cameras, UI, and telemetry
 - `vendor/`: pinned browser runtime for Three.js plus its MIT license
 - `package.json`: pinned dependencies, validation, browser QA, and serving commands
+- `scripts/syntax.test.mjs`: automatic syntax discovery for every first-party JavaScript module
 - `scripts/physics.test.mjs`: golden geometry, ballistics, contact, and replay tests
 - `scripts/architecture.test.mjs`: shared platform and official projection contract tests
+- `scripts/vendor.test.mjs`: exact-match check for the deployed Three.js files and license
+- `scripts/stage-site.mjs`: single source of truth for the GitHub Pages artifact
 - `scripts/lab-runtime.mjs`: WebGL, interaction, preserved-page, and responsive browser QA
 - `scripts/smoke.mjs`: structural smoke test
 - `.github/workflows/pages.yml`: GitHub Pages validation and deployment

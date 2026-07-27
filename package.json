@@ -4,18 +4,24 @@
   "private": true,
   "type": "module",
   "description": "An accuracy-first NYC one-wall handball game with a true-scale 3D physics lab.",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
-    "check": "node --check app.js && node --check src/game/match-app.js && node --check src/game/match-content.js && node --check src/game/match-environment.js && node --check src/platform/gamepad.js && node --check src/presentation/court-projection.js && node --check src/labs/ball-lab.js && npm run test:architecture && npm run test:physics && npm run test:smoke",
+    "test": "npm run check",
+    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:smoke",
+    "test:syntax": "node scripts/syntax.test.mjs",
     "test:architecture": "node scripts/architecture.test.mjs",
+    "test:vendor": "node scripts/vendor.test.mjs",
     "test:physics": "node scripts/physics.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "site:stage": "node scripts/stage-site.mjs",
     "serve": "python3 -m http.server 4173 --bind 127.0.0.1"
   },
-  "dependencies": {
-    "three": "0.185.1"
-  },
   "devDependencies": {
-    "playwright": "^1.58.2"
+    "playwright": "1.62.0",
+    "three": "0.185.1"
   }
 }

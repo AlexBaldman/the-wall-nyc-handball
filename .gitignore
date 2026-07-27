@@ -2,3 +2,6 @@
 _site/
 node_modules/
 npm-debug.log*
+.gstack/
+playwright-report/
+test-results/
