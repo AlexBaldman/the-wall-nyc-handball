@@ -47,6 +47,19 @@ const ui = {
   trainingGoal: document.getElementById('trainingGoal'),
   trainingPrompt: document.getElementById('trainingPrompt'),
   exitTrainingButton: document.getElementById('exitTrainingButton'),
+  rhythmButton: document.getElementById('rhythmButton'),
+  rhythmChip: document.getElementById('rhythmChip'),
+  rhythmMode: document.getElementById('rhythmMode'),
+  rhythmPercent: document.getElementById('rhythmPercent'),
+  rhythmDialog: document.getElementById('rhythmDialog'),
+  closeRhythmButton: document.getElementById('closeRhythmButton'),
+  resetRhythmButton: document.getElementById('resetRhythmButton'),
+  copyRhythmButton: document.getElementById('copyRhythmButton'),
+  rhythmPresetButtons: Array.from(document.querySelectorAll('[data-rhythm-preset]')),
+  rhythmControls: Array.from(document.querySelectorAll('[data-rhythm-control]')),
+  rhythmVerdictLabel: document.getElementById('rhythmVerdictLabel'),
+  rhythmVerdict: document.getElementById('rhythmVerdict'),
+  rhythmAdvice: document.getElementById('rhythmAdvice'),
   avatarButton: document.getElementById('avatarButton'),
   avatarDialog: document.getElementById('avatarDialog'),
   closeAvatarButton: document.getElementById('closeAvatarButton'),
@@ -103,9 +116,45 @@ const PHYSICS = {
 
 const CAMERA_MODES = [
   { id: 'broadcast', label: 'Broadcast', baseZoom: 1, yScale: 1, shear: 0 },
-  { id: 'follow', label: 'Follow', baseZoom: 1.24, yScale: 1, shear: 0 },
-  { id: 'courtside', label: 'Courtside', baseZoom: 1.34, yScale: 0.94, shear: -0.085 },
+  { id: 'player', label: 'Player', baseZoom: 1.1, yScale: 0.84, shear: 0 },
+  { id: 'follow', label: 'Follow', baseZoom: 1.2, yScale: 0.9, shear: 0 },
+  { id: 'courtside', label: 'Courtside', baseZoom: 1.28, yScale: 0.8, shear: -0.09 },
 ];
+
+const RHYTHM_PRESETS = {
+  study: {
+    label: 'Slow Study',
+    masterTempo: 0.68,
+    ballClock: 0.82,
+    footworkClock: 0.88,
+    readWindow: 1.36,
+    cameraDepth: 1.18,
+  },
+  real: {
+    label: 'Real Court',
+    masterTempo: 0.82,
+    ballClock: 0.9,
+    footworkClock: 0.94,
+    readWindow: 1.18,
+    cameraDepth: 1.12,
+  },
+  tournament: {
+    label: 'Tournament',
+    masterTempo: 0.96,
+    ballClock: 1,
+    footworkClock: 1,
+    readWindow: 1.03,
+    cameraDepth: 1.06,
+  },
+  afterdark: {
+    label: 'After Dark',
+    masterTempo: 1.08,
+    ballClock: 1.06,
+    footworkClock: 1.05,
+    readWindow: 0.92,
+    cameraDepth: 1,
+  },
+};
 
 const VENUES = [
   {
@@ -563,6 +612,27 @@ function loadSavedAvatar() {
   }
 }
 
+function loadSavedRhythm() {
+  const defaults = { preset: 'real', ...RHYTHM_PRESETS.real };
+  try {
+    const saved = JSON.parse(localStorage.getItem('the-wall-rhythm') || 'null');
+    if (!saved) {
+      return defaults;
+    }
+    return {
+      ...defaults,
+      ...saved,
+      masterTempo: clamp(Number(saved.masterTempo) || defaults.masterTempo, 0.6, 1.15),
+      ballClock: clamp(Number(saved.ballClock) || defaults.ballClock, 0.7, 1.15),
+      footworkClock: clamp(Number(saved.footworkClock) || defaults.footworkClock, 0.7, 1.15),
+      readWindow: clamp(Number(saved.readWindow) || defaults.readWindow, 0.85, 1.45),
+      cameraDepth: clamp(Number(saved.cameraDepth) || defaults.cameraDepth, 0.85, 1.3),
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 function createMatchStats() {
   return {
     pointsPlayed: 0,
@@ -636,10 +706,12 @@ const state = {
     aimY: 0,
     power: 0,
     holdPosition: false,
+    focusRead: false,
     gamepadIndex: null,
     gamepadButtons: [],
   },
   training: null,
+  rhythm: loadSavedRhythm(),
   avatar: loadSavedAvatar(),
   avatarPreviewPose: 'idle',
   presentation: {
@@ -649,7 +721,7 @@ const state = {
   },
   venueIndex: 0,
   camera: {
-    modeIndex: 0,
+    modeIndex: 1,
     zoom: 1,
     x: 480,
     y: 300,
@@ -684,6 +756,7 @@ function createActor(id, x, y, color) {
     inputStrength: 0,
     squeakCooldown: 0,
     holdingGround: false,
+    readingBall: false,
   };
 }
 
@@ -1105,6 +1178,7 @@ function syncScoreboard() {
   ui.cameraMode.textContent = cameraMode.label;
   ui.cameraZoom.textContent = `${Math.round(state.camera.zoom * 100)}%`;
   ui.venueButton.textContent = VENUES[state.venueIndex].label;
+  syncRhythmUi();
   document.body.dataset.server = state.server;
   document.body.dataset.mode = state.mode;
   document.body.dataset.serveFaults = String(state.serveFaults);
@@ -1143,6 +1217,153 @@ function updateTrainingHud() {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function rhythmArrivalRate() {
+  return state.rhythm.masterTempo * state.rhythm.ballClock;
+}
+
+function rhythmFootworkRate() {
+  return state.rhythm.masterTempo * state.rhythm.footworkClock;
+}
+
+function getRhythmVerdict() {
+  const arrival = rhythmArrivalRate();
+  const relativeRead = rhythmFootworkRate() / Math.max(arrival, 0.01);
+
+  if (arrival < 0.62) {
+    return {
+      label: 'Film-room pace',
+      advice: 'Built for studying wall reads, bounce timing, and where your feet should arrive.',
+    };
+  }
+  if (arrival < 0.82) {
+    return {
+      label: 'Readable park pace',
+      advice: relativeRead > 1.05
+        ? 'Your feet have a slight edge over the ball—good for learning real recovery position.'
+        : 'Ball and feet stay close enough to reward anticipation without feeling frantic.',
+    };
+  }
+  if (arrival <= 1.02) {
+    return {
+      label: 'Tournament pace',
+      advice: 'The rally clock is close to full speed; early reads and efficient routes matter.',
+    };
+  }
+  return {
+    label: 'After-dark arcade pace',
+    advice: 'The ball is ahead of the natural read window. Expect reaction play and short rallies.',
+  };
+}
+
+function syncRhythmUi() {
+  if (!ui.rhythmMode) {
+    return;
+  }
+  const preset = RHYTHM_PRESETS[state.rhythm.preset];
+  const arrivalPercent = Math.round(rhythmArrivalRate() * 100);
+  const values = {
+    masterTempo: state.rhythm.masterTempo,
+    ballClock: state.rhythm.ballClock,
+    footworkClock: state.rhythm.footworkClock,
+    readWindow: state.rhythm.readWindow,
+    cameraDepth: state.rhythm.cameraDepth,
+  };
+  ui.rhythmMode.textContent = preset?.label || 'Custom';
+  ui.rhythmPercent.textContent = `${arrivalPercent}%`;
+  for (const control of ui.rhythmControls) {
+    const key = control.dataset.rhythmControl;
+    const percent = Math.round(values[key] * 100);
+    control.value = String(percent);
+    const output = document.getElementById(`${key}Value`);
+    if (output) {
+      output.value = `${percent}%`;
+      output.textContent = `${percent}%`;
+    }
+  }
+  for (const button of ui.rhythmPresetButtons) {
+    const active = button.dataset.rhythmPreset === state.rhythm.preset;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+  const verdict = getRhythmVerdict();
+  ui.rhythmVerdictLabel.textContent = verdict.label;
+  ui.rhythmVerdict.textContent = `Ball arrives at ${arrivalPercent}% real-time speed`;
+  ui.rhythmAdvice.textContent = verdict.advice;
+  document.body.dataset.rhythm = state.rhythm.preset;
+}
+
+function saveRhythm() {
+  try {
+    localStorage.setItem('the-wall-rhythm', JSON.stringify(state.rhythm));
+  } catch {
+    // Live tuning still works if device storage is unavailable.
+  }
+}
+
+function applyRhythmPreset(presetId, announce = true) {
+  const preset = RHYTHM_PRESETS[presetId];
+  if (!preset) {
+    return;
+  }
+  state.rhythm = { preset: presetId, ...preset };
+  saveRhythm();
+  syncRhythmUi();
+  if (announce) {
+    setStatus(
+      `${preset.label} rhythm loaded.`,
+      `${Math.round(rhythmArrivalRate() * 100)}% ball arrival · ${Math.round(rhythmFootworkRate() * 100)}% footwork.`,
+      'Official court dimensions and spatial ball physics stay unchanged'
+    );
+  }
+}
+
+function updateRhythmControl(control) {
+  const key = control.dataset.rhythmControl;
+  if (!Object.hasOwn(state.rhythm, key)) {
+    return;
+  }
+  state.rhythm[key] = Number(control.value) / 100;
+  state.rhythm.preset = 'custom';
+  state.rhythm.label = 'Custom';
+  saveRhythm();
+  syncRhythmUi();
+}
+
+function openRhythmLab() {
+  syncRhythmUi();
+  if (typeof ui.rhythmDialog.showModal === 'function') {
+    ui.rhythmDialog.showModal();
+  }
+}
+
+function closeRhythmLab() {
+  if (ui.rhythmDialog.open) {
+    ui.rhythmDialog.close();
+  }
+}
+
+async function copyRhythmCode() {
+  const rhythm = state.rhythm;
+  const code = [
+    'WALL-RHYTHM v1',
+    rhythm.preset,
+    `tempo:${Math.round(rhythm.masterTempo * 100)}`,
+    `ball:${Math.round(rhythm.ballClock * 100)}`,
+    `feet:${Math.round(rhythm.footworkClock * 100)}`,
+    `read:${Math.round(rhythm.readWindow * 100)}`,
+    `depth:${Math.round(rhythm.cameraDepth * 100)}`,
+  ].join(' | ');
+  try {
+    await navigator.clipboard.writeText(code);
+    ui.copyRhythmButton.textContent = 'Copied';
+  } catch {
+    window.prompt('Copy this playtest code:', code);
+  }
+  window.setTimeout(() => {
+    ui.copyRhythmButton.textContent = 'Copy playtest code';
+  }, 1400);
 }
 
 function ensureAudio() {
@@ -1332,6 +1553,7 @@ function resetActorsForServe() {
     actor.inputStrength = 0;
     actor.squeakCooldown = 0;
     actor.holdingGround = false;
+    actor.readingBall = false;
   }
 }
 
@@ -1931,6 +2153,18 @@ function getAiAimBias(actor, serve = false) {
   return clamp(openCourt + downLine + (Math.random() - 0.5) * randomRange, -0.94, 0.94);
 }
 
+function getStepInTransfer(actor, balance) {
+  const speed = Math.hypot(actor.vx, actor.vy);
+  if (speed < 32 || balance < 0.56) {
+    return 0;
+  }
+  const forwardSpeed = Math.max(0, -actor.vy);
+  const forwardShare = forwardSpeed / Math.max(speed, 1);
+  const usefulDrive = clamp((forwardSpeed - 28) / 128, 0, 1);
+  const control = 1 - clamp((speed - 205) / 135, 0, 0.82);
+  return clamp(usefulDrive * forwardShare * control * balance, 0, 1);
+}
+
 function strikeBall(actor, options = {}) {
   const ball = state.ball;
   const otherId = state.training && actor.id === 'player'
@@ -1959,12 +2193,17 @@ function strikeBall(actor, options = {}) {
   const baseContact = options.serve
     ? { label: 'Serve', type: 'Serve', balance: 1, pace: 1, aimError: 0.02, heightOffset: 0, color: actor.color }
     : getContactQuality(actor, shotKey);
+  const stepIn = options.serve ? 0 : getStepInTransfer(actor, baseContact.balance);
   const balancePace = 0.82 + baseContact.balance * 0.18;
   const balanceError = (1 - baseContact.balance) * 0.11;
   const contact = {
     ...baseContact,
-    pace: baseContact.pace * chargeGrade.pace * balancePace,
-    aimError: Math.max(0.012, baseContact.aimError + chargeGrade.aimError + balanceError),
+    pace: baseContact.pace * chargeGrade.pace * balancePace * (1 + stepIn * 0.08),
+    aimError: Math.max(
+      0.012,
+      (baseContact.aimError + chargeGrade.aimError + balanceError) * (1 - stepIn * 0.18)
+    ),
+    stepIn,
   };
   const aimBias = clamp(
     actor.id === 'player' ? aimBiasFromKeys() : getAiAimBias(actor, options.serve),
@@ -2099,6 +2338,8 @@ function strikeBall(actor, options = {}) {
     state.flash = Math.max(state.flash, 0.7);
     showCallout('PURE', ball.x, ball.y - ball.z * 0.34, shotProfile.color, 0.6);
     rumble(85, 0.52, 0.72);
+  } else if (stepIn >= 0.52) {
+    showCallout('STEP IN', ball.x, ball.y - ball.z * 0.34, '#d7f36a', 0.54);
   } else if (contact.label === 'Fly') {
     showCallout('FLY', ball.x, ball.y - ball.z * 0.34, '#e5a9ff', 0.48);
   } else if (contact.label === 'Short hop') {
@@ -2125,7 +2366,13 @@ function strikeBall(actor, options = {}) {
         ? `${contact.label} ${shotProfile.label.toLowerCase()} — ${getBalanceLabel(contact.balance).toLowerCase()}.`
         : `${opponentName()} · ${difficulty.style}: ${shotProfile.label.toLowerCase()}.`,
       actor.id === 'player'
-        ? `${shotProfile.cue} ${pureContact ? 'Perfect preparation and intercept.' : chargeGrade.label + '.'}`.trim()
+        ? `${shotProfile.cue} ${
+            pureContact
+              ? 'Perfect preparation and intercept.'
+              : stepIn >= 0.52
+                ? 'Weight transferred through the target.'
+                : chargeGrade.label + '.'
+          }`.trim()
         : 'Move your feet and cut it off before the second bounce.',
       `Race to ${state.targetScore}. Current selection: ${SHOTS[state.selectedShot].label}.`
     );
@@ -2391,6 +2638,9 @@ function updatePlayer(dt) {
   const canHoldGround = state.ball.active && state.ball.expectedReceiver !== 'player';
   const wasHoldingGround = state.player.holdingGround;
   state.player.holdingGround = canHoldGround && (isDown('e') || state.input.holdPosition);
+  const canReadBall = state.ball.active && state.ball.expectedReceiver === 'player';
+  const wasReadingBall = state.player.readingBall;
+  state.player.readingBall = canReadBall && (isDown('q') || state.input.focusRead);
   if (state.player.holdingGround) {
     moveX = 0;
     moveY = 0;
@@ -2401,6 +2651,9 @@ function updatePlayer(dt) {
       rumble(34, 0.08, 0.2);
     }
   }
+  if (state.player.readingBall && !wasReadingBall) {
+    showCallout('TRACK', state.player.x, state.player.y - 34, '#e5a9ff', 0.42);
+  }
 
   const rawMagnitude = Math.hypot(moveX, moveY);
   const magnitude = rawMagnitude || 1;
@@ -2408,11 +2661,12 @@ function updatePlayer(dt) {
   const desiredX = rawMagnitude > 0 ? moveX / magnitude : 0;
   const desiredY = rawMagnitude > 0 ? moveY / magnitude : 0;
   const turnStress = getTurnStress(state.player, desiredX, desiredY, inputStrength);
-  const movementScale = state.player.plantTimer > 0
+  const preparationScale = state.player.plantTimer > 0
     ? 0.12
     : state.charge.active
       ? 0.62 - state.charge.value * 0.18
       : 1;
+  const movementScale = preparationScale * (state.player.readingBall ? 0.86 : 1);
   const targetSpeed = state.player.speed * movementScale * inputStrength;
   const targetVx = desiredX * targetSpeed;
   const targetVy = desiredY * targetSpeed;
@@ -2504,6 +2758,7 @@ function updateGamepad() {
     state.input.aimY = 0;
     state.input.power = 0;
     state.input.holdPosition = false;
+    state.input.focusRead = false;
     ui.gamepadStatus.classList.remove('is-connected');
     ui.gamepadStatus.querySelector('span').textContent = 'Keys';
     if (state.charge.inputKey?.startsWith('pad-')) {
@@ -2518,6 +2773,7 @@ function updateGamepad() {
   state.input.aimY = applyDeadzone(gamepad.axes[3] || 0, 0.12);
   state.input.power = gamepad.buttons[6]?.value || 0;
   state.input.holdPosition = Boolean(gamepad.buttons[10]?.pressed);
+  state.input.focusRead = Boolean(gamepad.buttons[11]?.pressed);
   ui.gamepadStatus.classList.add('is-connected');
   ui.gamepadStatus.querySelector('span').textContent = 'Gamepad';
 
@@ -3014,6 +3270,8 @@ function cycleCamera() {
     `${mode.label} camera.`,
     mode.id === 'broadcast'
       ? 'The full rally and both recovery positions stay visible.'
+      : mode.id === 'player'
+        ? 'A deeper baseline-style view makes foreground footwork and wall angles easier to read.'
       : mode.id === 'follow'
         ? 'A tighter match camera follows you and the live ball.'
         : 'A low, angled crop adds courtside speed and comic-book energy.',
@@ -3272,10 +3530,40 @@ function drawBackground() {
   ctx.fillStyle = floor;
   ctx.fillRect(COURT.left, COURT.frontWallY, COURT.right - COURT.left, COURT.bottom - COURT.frontWallY);
 
-  for (let y = COURT.frontWallY; y < COURT.bottom; y += 38) {
-    ctx.fillStyle = y % 76 === 0 ? 'rgba(255,255,255,0.018)' : 'rgba(0,0,0,0.025)';
-    ctx.fillRect(COURT.left, y, COURT.right - COURT.left, 38);
+  for (let index = 0; index < 9; index += 1) {
+    const start = Math.pow(index / 9, 1.55);
+    const end = Math.pow((index + 1) / 9, 1.55);
+    const y = COURT.frontWallY + (COURT.bottom - COURT.frontWallY) * start;
+    const nextY = COURT.frontWallY + (COURT.bottom - COURT.frontWallY) * end;
+    ctx.fillStyle = index % 2 === 0 ? 'rgba(255,255,255,0.026)' : 'rgba(0,0,0,0.035)';
+    ctx.fillRect(COURT.left, y, COURT.right - COURT.left, nextY - y);
   }
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 239, 204, 0.085)';
+  ctx.lineWidth = 2;
+  for (const offset of [-170, -86, 86, 170]) {
+    ctx.beginPath();
+    ctx.moveTo(COURT.centerX + offset * 0.22, COURT.frontWallY);
+    ctx.lineTo(COURT.centerX + offset, COURT.bottom);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(5, 11, 18, 0.08)';
+  ctx.beginPath();
+  ctx.moveTo(COURT.left, COURT.frontWallY);
+  ctx.lineTo(COURT.centerX - 62, COURT.frontWallY);
+  ctx.lineTo(COURT.centerX - 206, COURT.bottom);
+  ctx.lineTo(COURT.left, COURT.bottom);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(COURT.centerX + 62, COURT.frontWallY);
+  ctx.lineTo(COURT.right, COURT.frontWallY);
+  ctx.lineTo(COURT.right, COURT.bottom);
+  ctx.lineTo(COURT.centerX + 206, COURT.bottom);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 
   ctx.strokeStyle = 'rgba(47, 34, 30, 0.26)';
   ctx.lineWidth = 2;
@@ -3323,6 +3611,16 @@ function drawCourtLine(y, width) {
   ctx.stroke();
 }
 
+function getRenderDepthScale(y) {
+  const progress = clamp(
+    (y - COURT.frontWallY) / (COURT.bottom - COURT.frontWallY),
+    0,
+    1
+  );
+  const depth = state.rhythm.cameraDepth;
+  return 0.72 + Math.pow(progress, 1.08) * 0.5 * depth;
+}
+
 function drawActor(actor) {
   const isPlayer = actor.id === 'player';
   const avatar = isPlayer
@@ -3345,8 +3643,9 @@ function drawActor(actor) {
   const topColor = palette.id === 'original' ? top.color : palette.top;
   const accentColor = palette.id === 'original' ? top.accent : palette.accent;
   const bottomColor = palette.id === 'original' ? bottom.color : palette.bottom;
-  const depth = 0.76 + ((actor.y - COURT.frontWallY) / (COURT.bottom - COURT.frontWallY)) * 0.3;
-  const size = actor.radius * depth * build.scale;
+  const depth = getRenderDepthScale(actor.y);
+  const playerCameraBoost = CAMERA_MODES[state.camera.modeIndex].id === 'player' ? 1.1 : 1;
+  const size = actor.radius * depth * build.scale * playerCameraBoost;
   const bodyWidth = build.width;
   const isPlayerReady = isPlayer && canActorStrike(actor);
   let actorX = Math.round(actor.x / 2) * 2;
@@ -3636,41 +3935,51 @@ function drawBall() {
   const ball = state.ball;
   const renderY = ball.y - ball.z * 0.34;
   const shotColor = SHOTS[ball.shotKey]?.color || '#ffd04e';
+  const ballDepth = getRenderDepthScale(ball.y);
+  const playerCameraBoost = CAMERA_MODES[state.camera.modeIndex].id === 'player' ? 1.08 : 1;
+  const renderRadius = ball.radius * (0.78 + ballDepth * 0.34) * playerCameraBoost;
 
   for (let index = ball.trail.length - 1; index >= 0; index -= 1) {
     const point = ball.trail[index];
     const alpha = (ball.trail.length - index) / ball.trail.length;
+    const trailDepth = getRenderDepthScale(point.y);
     ctx.globalAlpha = alpha * 0.28;
     ctx.fillStyle = shotColor;
     ctx.beginPath();
-    ctx.arc(point.x, point.y - point.z * 0.34, Math.max(1.5, ball.radius * alpha * 0.7), 0, Math.PI * 2);
+    ctx.arc(
+      point.x,
+      point.y - point.z * 0.34,
+      Math.max(1.5, ball.radius * trailDepth * alpha * 0.7),
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
   ctx.beginPath();
-  ctx.ellipse(ball.x + 2, ball.y + 8, ball.radius + 5, ball.radius * 0.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(ball.x + 2, ball.y + 8, renderRadius + 5, renderRadius * 0.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const glow = ctx.createRadialGradient(ball.x - 2, renderY - 3, 1, ball.x, renderY, ball.radius + 9);
+  const glow = ctx.createRadialGradient(ball.x - 2, renderY - 3, 1, ball.x, renderY, renderRadius + 9);
   glow.addColorStop(0, '#fffbd5');
   glow.addColorStop(0.35, shotColor);
   glow.addColorStop(0.72, '#ff9b2f');
   glow.addColorStop(1, 'rgba(255, 106, 42, 0)');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(ball.x, renderY, ball.radius + 6, 0, Math.PI * 2);
+  ctx.arc(ball.x, renderY, renderRadius + 6, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = shotColor;
   ctx.beginPath();
-  ctx.arc(ball.x, renderY, ball.radius, 0, Math.PI * 2);
+  ctx.arc(ball.x, renderY, renderRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = 'rgba(115, 49, 19, 0.45)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(ball.x, renderY, ball.radius * 0.64, -0.9, 1.35);
+  ctx.arc(ball.x, renderY, renderRadius * 0.64, -0.9, 1.35);
   ctx.stroke();
 
   if (Math.abs(ball.spin) > 0.2 || Math.abs(ball.verticalSpin) > 0.2) {
@@ -3681,7 +3990,7 @@ function drawBall() {
     ctx.arc(
       ball.x,
       renderY,
-      ball.radius + 7,
+      renderRadius + 7,
       ball.spin >= 0 ? -1.2 : 1.9,
       ball.spin >= 0 ? 1.6 : 4.7
     );
@@ -3794,13 +4103,20 @@ function drawReadMarker() {
   ) {
     return;
   }
-  const visibility = state.training
+  const baseVisibility = state.training
     ? 0.82
     : state.difficulty === 'easy'
       ? 0.72
       : state.difficulty === 'medium'
         ? 0.42
         : 0.2;
+  const visibility = clamp(
+    baseVisibility
+      + (state.rhythm.readWindow - 1) * 0.32
+      + (state.player.readingBall ? 0.34 : 0),
+    0.16,
+    0.94
+  );
   const secondBounce = prediction.bounceNumber > 1;
   const pulse = reducedMotionQuery?.matches ? 0.5 : (Math.sin(performance.now() / 105) + 1) / 2;
   const radius = clamp(13 + prediction.eta * 19, 14, 40);
@@ -3821,7 +4137,7 @@ function drawReadMarker() {
   ctx.font = '900 10px "Space Grotesk"';
   ctx.textAlign = 'center';
   ctx.fillText(
-    secondBounce ? '2ND' : prediction.inBounds ? 'READ' : 'OUT',
+    secondBounce ? '2ND' : prediction.inBounds ? state.player.readingBall ? 'TRACK' : 'READ' : 'OUT',
     prediction.x,
     prediction.y + 3
   );
@@ -3852,9 +4168,11 @@ function drawCallout() {
 
 function getReachForActor(actor) {
   if (actor.id === 'player') {
+    const labReadScale = 1 + (state.rhythm.readWindow - 1) * 0.42;
+    const focusScale = actor.readingBall ? 1.1 : 1;
     return {
-      reachX: actor.radius + 24,
-      reachY: actor.radius + 24,
+      reachX: (actor.radius + 24) * labReadScale * focusScale,
+      reachY: (actor.radius + 24) * labReadScale * focusScale,
     };
   }
 
@@ -3872,6 +4190,13 @@ function getCameraTarget(mode, effectiveZoom) {
 
   if (mode.id === 'broadcast' && effectiveZoom <= 1.04) {
     return { x: 480, y: 300 };
+  }
+
+  if (mode.id === 'player') {
+    return {
+      x: state.player.x * 0.52 + activeBallX * 0.48,
+      y: state.player.y * 0.35 + activeBallY * 0.34 + COURT.shortLineY * 0.31,
+    };
   }
 
   if (mode.id === 'follow') {
@@ -3998,7 +4323,8 @@ function draw() {
   const fitScale = portraitCamera ? height / 600 : Math.min(width / 960, height / 600);
   const effectiveZoom = mode.baseZoom * state.camera.zoom;
   const scale = fitScale * effectiveZoom;
-  const scaleY = scale * mode.yScale;
+  const depthCompression = clamp(1 - (state.rhythm.cameraDepth - 1) * 0.58, 0.82, 1.09);
+  const scaleY = scale * mode.yScale * depthCompression;
   const visibleWorldWidth = width / scale;
   const visibleWorldHeight = height / scaleY;
   const target = getCameraTarget(mode, effectiveZoom);
@@ -4041,9 +4367,13 @@ function draw() {
 function tick(now) {
   const dt = Math.min((now - state.lastTime) / 1000, 0.025);
   state.lastTime = now;
+  const worldDt = dt * state.rhythm.masterTempo;
+  const actorDt = worldDt * state.rhythm.footworkClock;
+  const ballDt = worldDt * state.rhythm.ballClock;
+  const preparationDt = worldDt / state.rhythm.readWindow;
 
   updateGamepad();
-  updateCharge(dt);
+  updateCharge(preparationDt);
   if (ui.avatarDialog.open) {
     drawAvatarPreview(now / 1000);
   }
@@ -4054,15 +4384,15 @@ function tick(now) {
     requestAnimationFrame(tick);
     return;
   }
-  updatePlayer(dt);
-  updateAi(dt);
+  updatePlayer(actorDt);
+  updateAi(actorDt);
   if (state.hitStop > 0) {
     draw();
     requestAnimationFrame(tick);
     return;
   }
-  updateBall(dt);
-  updateCooldowns(dt);
+  updateBall(ballDt);
+  updateCooldowns(worldDt);
   updateEffects(dt);
   draw();
   requestAnimationFrame(tick);
@@ -4264,6 +4594,22 @@ for (const card of ui.trainingCards) {
 ui.trainingDialog.addEventListener('click', (event) => {
   if (event.target === ui.trainingDialog) {
     closeTraining();
+  }
+});
+ui.rhythmButton.addEventListener('click', openRhythmLab);
+ui.rhythmChip.addEventListener('click', openRhythmLab);
+ui.closeRhythmButton.addEventListener('click', closeRhythmLab);
+ui.resetRhythmButton.addEventListener('click', () => applyRhythmPreset('real'));
+ui.copyRhythmButton.addEventListener('click', copyRhythmCode);
+for (const button of ui.rhythmPresetButtons) {
+  button.addEventListener('click', () => applyRhythmPreset(button.dataset.rhythmPreset));
+}
+for (const control of ui.rhythmControls) {
+  control.addEventListener('input', () => updateRhythmControl(control));
+}
+ui.rhythmDialog.addEventListener('click', (event) => {
+  if (event.target === ui.rhythmDialog) {
+    closeRhythmLab();
   }
 });
 ui.soundButton.addEventListener('click', toggleSound);

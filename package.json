@@ -1,6 +1,6 @@
 {
   "name": "the-wall-nyc-handball",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A dependency-free NYC one-wall handball browser game.",
   "scripts": {

@@ -57,9 +57,34 @@ Keyboard, touch, and gamepad ultimately select the same shot key and invoke the 
 - Right bumper: kill.
 - Left trigger: power modifier.
 - Right trigger: roller.
+- Left-stick click: hold the legal off-ball Set position.
+- Right-stick click: hold Read stance for stronger ball tracking and a modestly wider contact window at the cost of foot speed.
 - View/Share: camera cycle.
 
 The browser Gamepad API is polled once per animation frame. Pressing a contact button begins preparation and releasing it commits the swing. The clean-power window changes by contact: a backhand prepares faster than a fist, while a roller needs a later, narrower load. Early release is the accurate control option; clean power adds pace, and wide aiming compounds risk as commitment rises. Stick values use a deadzone and now preserve analog magnitude through the movement system instead of being normalized back to full speed. Hard reversals temporarily reduce footwork balance and can trigger synthesized sneaker squeak plus subtle rumble. Rumble is optional and feature-detected.
+
+## Rhythm Lab
+
+The simulation has independent real-time clocks for five different questions:
+
+- **Master tempo** changes the overall cadence of play.
+- **Ball clock** changes how quickly an unchanged spatial trajectory unfolds on screen.
+- **Footwork clock** changes acceleration, turning, and recovery speed.
+- **Read window** changes preparation speed and player contact forgiveness.
+- **Camera depth** changes foreshortening and foreground scale only.
+
+The default `Real Court` preset makes the ball arrive at roughly 74% of the old prototype’s real-time rate. This is not a slow-motion rewrite of gravity: the same sequence of 120 Hz physics states plays over more wall-clock time, so wall targets, bounce locations, spin, cracks, and fault decisions remain comparable between presets. `Slow Study`, `Tournament`, and `After Dark` provide bounded test conditions, while custom settings save locally and can be copied as a reproducible playtest code.
+
+## Film-study control experiments
+
+Published USHA instruction emphasizes watching the ball into the hand, setting up slightly deeper so the hitter can step into contact, transferring weight toward the target, and recovering near center rather than chasing the last shot.
+
+Two first experiments translate those ideas without adding an automatic-hit assist:
+
+1. **Read stance** — hold `Q`, touch `Read · Hold`, or click `R3` while receiving. The bounce marker becomes easier to see and the reach window expands modestly, but foot speed drops. The player still chooses the route, contact, aim, and release.
+2. **Step-in transfer** — controlled forward movement at contact receives a small pace and accuracy benefit. Sprinting, lateral reaching, or entering the ball jammed removes the benefit. This rewards pre-shot positioning and weight transfer instead of treating all movement as an accuracy penalty.
+
+These are research-derived hypotheses, not champion-approved controls. They remain in the Rhythm Lab/playtest layer until experienced-player sessions validate or reject them.
 
 ## Rival match memory
 

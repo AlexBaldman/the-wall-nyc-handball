@@ -12,6 +12,7 @@ The first browser-game vertical slice is playable. It has moved well beyond the 
 - Keyboard, touch, and gamepad controls with analog movement and aiming
 - Four camera presets, multiple NYC-inspired venues, a player creator, and Wall School training drills
 - Match presentation, post-match statistics, accessibility support, smoke tests, and an automated GitHub Pages test deployment
+- A device-saved Rhythm Lab, a deeper default Player camera, Read stance, and step-in weight-transfer experiment
 
 The immediate job is no longer proving that handball can be fun in the browser. It is turning this strong vertical slice into a measured, replayable single-player game.
 
@@ -84,6 +85,7 @@ Turn the vertical slice into a game players want to finish and replay.
 - Each AI tier creates a recognizable tactical problem instead of merely moving faster
 - Players can complete a 20–30 minute ladder session and want another run
 - Physics tuning is backed by real playtest data rather than intuition alone
+- At least four experienced one-wall players complete the same instrumented controller and camera protocol
 
 ### Phase 3: 3D Production Exploration
 

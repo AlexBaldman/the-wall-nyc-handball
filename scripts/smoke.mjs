@@ -52,6 +52,9 @@ const requiredSystems = [
   'updateFootworkBalance',
   'drawAimWindow',
   'createMatchStats',
+  'applyRhythmPreset',
+  'rhythmArrivalRate',
+  'getStepInTransfer',
 ];
 for (const system of requiredSystems) {
   if (!app.includes(`function ${system}`)) {

@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#07121d">
     <title>The Wall — NYC One-Wall Handball</title>
-    <meta name="description" content="A fast, expressive one-wall handball game set on a sunset NYC park court.">
+    <meta name="description" content="An expressive, tunable one-wall handball game set on a sunset NYC park court.">
     <link rel="canonical" href="https://alexbaldman.github.io/the-wall-nyc-handball/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="The Wall — NYC One-Wall Handball">
-    <meta property="og:description" content="Play a fast, expressive one-wall handball match with real court geometry, spin, crack shots, adaptive rivals, and NYC park energy.">
+    <meta property="og:description" content="Play a tunable one-wall handball match with real court geometry, spin, crack shots, adaptive rivals, and NYC park energy.">
     <meta property="og:url" content="https://alexbaldman.github.io/the-wall-nyc-handball/">
     <meta property="og:image" content="https://alexbaldman.github.io/the-wall-nyc-handball/outputs/the-wall-gameplay-final-clean.png">
     <meta property="og:image:alt" content="The Wall game showing two pixel-art players on a sunset one-wall handball court.">
@@ -44,6 +44,10 @@
                 <button class="utility-button utility-button--training" id="trainingButton" type="button">
                     <span class="utility-icon" aria-hidden="true">★</span>
                     <span class="utility-label">Wall School</span>
+                </button>
+                <button class="utility-button utility-button--rhythm" id="rhythmButton" type="button">
+                    <span class="utility-icon" aria-hidden="true">≋</span>
+                    <span class="utility-label">Rhythm Lab</span>
                 </button>
                 <span class="gamepad-status" id="gamepadStatus" aria-live="polite">
                     <i aria-hidden="true"></i><span>Keys</span>
@@ -91,6 +95,9 @@
                     <div class="court-readouts" aria-label="Current game settings">
                         <span><i aria-hidden="true"></i><b id="shotMode">Flat</b> shot</span>
                         <span><i aria-hidden="true"></i><b id="difficultyMode">Wall Ghost</b> rival</span>
+                        <button class="rhythm-chip" id="rhythmChip" type="button" aria-label="Open Rhythm Lab">
+                            <i aria-hidden="true"></i><b id="rhythmMode">Real Court</b> <small id="rhythmPercent">74%</small>
+                        </button>
                     </div>
 
                     <div class="camera-controls" aria-label="Camera controls">
@@ -183,6 +190,7 @@
                             <button class="spin-button" type="button" data-key="z">← English</button>
                             <button class="spin-button" type="button" data-key="x">English →</button>
                             <button class="spin-button yield-button" type="button" data-key="e" aria-label="Hold a legal stationary position">Set · Hold</button>
+                            <button class="spin-button read-button" type="button" data-key="q" aria-label="Track the ball and widen the read window">Read · Hold</button>
                         </div>
                         <button class="swing-button" id="swingButton" type="button">Hold · Slap</button>
                     </div>
@@ -195,6 +203,7 @@
                 <p><span>Contacts</span> 1–7 / J K L U I O P</p>
                 <p><span>Extra pace</span> Shift</p>
                 <p><span>Set position</span> Hold E off-ball</p>
+                <p><span>Read stance</span> Hold Q / R3</p>
                 <p><span>Gamepad</span> Sticks + face buttons</p>
                 <p><span>Camera</span> C / − / +</p>
                 <button id="rulesButton" type="button">Court rules ↗</button>
@@ -240,7 +249,8 @@
                 <dl>
                     <div><dt>Left stick</dt><dd>True analog footwork: feather it to set your feet.</dd></div>
                     <div><dt>Right stick</dt><dd>Aim the live wall target, height, and side english.</dd></div>
-                    <div><dt>L3 / stick click</dt><dd>Hold a legal stationary position while your rival owns the touch.</dd></div>
+                    <div><dt>L3 / left click</dt><dd>Hold a legal stationary position while your rival owns the touch.</dd></div>
+                    <div><dt>R3 / right click</dt><dd>Read stance: track the ball with a wider contact window, but slower feet.</dd></div>
                     <div><dt>Face buttons</dt><dd>Hold and release palm, slice, fist, and backhand contacts.</dd></div>
                     <div><dt>Shoulders</dt><dd>Lob, kill, roller, and power.</dd></div>
                 </dl>
@@ -264,12 +274,81 @@
                 <h3>Read the court</h3>
                 <dl>
                     <div><dt>Broadcast</dt><dd>Full-court match framing.</dd></div>
+                    <div><dt>Player</dt><dd>Deeper, baseline-style view with stronger foreground scale.</dd></div>
                     <div><dt>Follow</dt><dd>Tracks you and the live ball.</dd></div>
                     <div><dt>Courtside</dt><dd>Closer, angled comic-book view.</dd></div>
                 </dl>
             </section>
         </div>
         <p class="dialog-rule">Official geometry: 20′ wide, 34′ to the long line, 16′ wall and short line. Only the server scores; two service faults cause a side out. This quick format plays to 11.</p>
+    </dialog>
+
+    <dialog class="rhythm-dialog" id="rhythmDialog">
+        <div class="dialog-header">
+            <div>
+                <span class="dialog-kicker">16-bit court lab · live tuning</span>
+                <h2>Find the bounce.</h2>
+            </div>
+            <button class="dialog-close" id="closeRhythmButton" type="button" aria-label="Close Rhythm Lab">×</button>
+        </div>
+        <div class="rhythm-layout">
+            <section class="rhythm-presets" aria-label="Rhythm presets">
+                <p>Change how quickly the simulation reaches you without changing the official court or the ball’s spatial arc.</p>
+                <div class="rhythm-preset-grid">
+                    <button type="button" data-rhythm-preset="study">
+                        <span>60 FPS dojo</span><strong>Slow Study</strong><small>Learn reads and contact timing.</small>
+                    </button>
+                    <button type="button" data-rhythm-preset="real">
+                        <span>Recommended</span><strong>Real Court</strong><small>Readable park rhythm and deliberate footwork.</small>
+                    </button>
+                    <button type="button" data-rhythm-preset="tournament">
+                        <span>Full pace</span><strong>Tournament</strong><small>Fast reactions with honest physics.</small>
+                    </button>
+                    <button type="button" data-rhythm-preset="afterdark">
+                        <span>Arcade</span><strong>After Dark</strong><small>Hot ball, sharp feet, loud rallies.</small>
+                    </button>
+                </div>
+                <div class="rhythm-verdict">
+                    <span id="rhythmVerdictLabel">Readable park pace</span>
+                    <strong id="rhythmVerdict">Ball arrives at 74% real-time speed</strong>
+                    <small id="rhythmAdvice">A little more read time than footwork time—good for learning real positioning.</small>
+                </div>
+            </section>
+            <section class="rhythm-mixer" aria-label="Rhythm tuning controls">
+                <label>
+                    <span><b>Master tempo</b><output id="masterTempoValue">82%</output></span>
+                    <input type="range" min="60" max="115" step="1" value="82" data-rhythm-control="masterTempo">
+                    <small>Whole-court clock: rallies, preparation, cooldowns, and movement.</small>
+                </label>
+                <label>
+                    <span><b>Ball clock</b><output id="ballClockValue">90%</output></span>
+                    <input type="range" min="70" max="115" step="1" value="90" data-rhythm-control="ballClock">
+                    <small>Arrival speed only. Trajectory, gravity, spin, and bounce geometry stay intact.</small>
+                </label>
+                <label>
+                    <span><b>Footwork clock</b><output id="footworkClockValue">94%</output></span>
+                    <input type="range" min="70" max="115" step="1" value="94" data-rhythm-control="footworkClock">
+                    <small>How quickly players accelerate, turn, recover, and cover court.</small>
+                </label>
+                <label>
+                    <span><b>Read window</b><output id="readWindowValue">118%</output></span>
+                    <input type="range" min="85" max="145" step="1" value="118" data-rhythm-control="readWindow">
+                    <small>Preparation and contact forgiveness—not an automatic return.</small>
+                </label>
+                <label>
+                    <span><b>Camera depth</b><output id="cameraDepthValue">112%</output></span>
+                    <input type="range" min="85" max="130" step="1" value="112" data-rhythm-control="cameraDepth">
+                    <small>Foreground scale and court foreshortening; no effect on collisions.</small>
+                </label>
+            </section>
+        </div>
+        <div class="rhythm-savebar">
+            <p>Settings save on this device. Copy a playtest code so another player can reproduce the exact feel.</p>
+            <div>
+                <button id="resetRhythmButton" type="button">Reset real court</button>
+                <button id="copyRhythmButton" type="button">Copy playtest code</button>
+            </div>
+        </div>
     </dialog>
 
     <dialog class="avatar-dialog" id="avatarDialog">

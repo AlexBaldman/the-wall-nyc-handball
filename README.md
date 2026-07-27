@@ -11,7 +11,8 @@ A court-first browser game focused on the first thing that matters for this idea
 Current build includes:
 
 - official one-wall proportions: a 20-foot-wide wall, 34-foot long line, 16-foot short line, 25-foot service markers, and 16-foot wall height
-- `Broadcast`, `Follow`, and angled `Courtside` cameras with user zoom
+- `Broadcast`, deeper `Player`, `Follow`, and angled `Courtside` cameras with user zoom
+- a device-saved Rhythm Lab that independently tunes master tempo, ball clock, footwork clock, read window, and camera depth
 - West 4th Street, Coney Island, and Venice Beach atmosphere presets on identical competition geometry
 - `Serve` and `Reset Match` controls
 - quick race-to-11 flow with server-only scoring, side outs, and two service attempts
@@ -27,6 +28,8 @@ Current build includes:
 - planted-foot power contacts, jammed and on-the-run accuracy penalties, 200 ms swing buffering, and brief impact hit-stop
 - true analog movement magnitude, momentum-aware direction changes, recoverable footwork balance, sneaker squeaks, and controller feedback
 - an off-ball `Set` stance that instantly arrests momentum and protects against movement-created avoidable block calls
+- a receiving `Read` stance that trades some foot speed for clearer bounce tracking and modest contact forgiveness
+- a controlled step-in reward that converts balanced forward weight transfer into a small pace and accuracy benefit
 - access-lane officiating that penalizes a moving player who crowds the receiver’s body, ball, or swing path
 - a live wall-target preview whose spray window reacts to spacing, preparation, shot risk, and ambitious angles
 - 120 Hz fixed-step ball simulation with frame-rate-independent air drag, spin curve, and live first-bounce prediction
@@ -58,9 +61,10 @@ Current build includes:
 - `Z` / `X`: left or right english while swinging
 - `Shift`: extra pace
 - hold `E` after your shot: set a legal stationary position while the opponent owns the touch
+- hold `Q` while receiving: track the ball with a wider read window but slower feet
 - `R`: serve
 - `T`: open Wall School
-- `C`: cycle Broadcast, Follow, and Courtside cameras
+- `C`: cycle Broadcast, Player, Follow, and Courtside cameras
 - `-` / `+`: zoom the active camera out or in
 - `Backspace`: reset match
 
@@ -81,6 +85,7 @@ The first connected standard Xbox, PlayStation, or compatible controller is dete
 - left trigger: power modifier
 - right trigger: roller
 - left-stick click / `L3`: hold a stationary Set position off-ball
+- right-stick click / `R3`: hold Read stance while receiving
 - View / Share: cycle camera
 
 Supported controllers receive contact, wall-impact, and point-result rumble where the browser exposes a vibration actuator.
@@ -121,3 +126,4 @@ GitHub Actions validates the game, stages only the playable static assets, and d
 - `docs/court-geometry-and-camera-study.md`: official geometry mapping, venue references, and match-camera findings
 - `docs/control-and-training-design.md`: tennis-game inspiration, handball mappings, controller layout, and drill design
 - `docs/avatar-creator-design.md`: inclusive character-creator scope, option taxonomy, presets, and multiplayer-safe data model
+- `docs/champion-playtest-protocol.md`: expert recruitment, interview script, instrumented session, and evidence rules

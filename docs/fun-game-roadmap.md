@@ -22,8 +22,11 @@ The current browser build now covers the original immediate priorities:
 - three named rivals with different feet, reads, recovery, shot choices, and match-memory adaptation
 - official court geometry, server-only scoring, side outs, faults, and movement-created avoidable blocks
 - Broadcast, Follow, and Courtside cameras across three atmosphere presets
+- a default Player camera, independent camera-depth tuning, and a larger court presentation
 - four Wall School drills, My Player customization, match intros, poses, and post-match statistics
 - keyboard, touch, and standard gamepad support
+- a device-saved Rhythm Lab with independent master, ball, footwork, read-window, and camera-depth clocks
+- an optional Read stance plus a controlled step-in reward based on real one-wall preparation cues
 
 ## Immediate priorities
 
@@ -76,7 +79,7 @@ The current browser build now covers the original immediate priorities:
 
 ## Good Short-Term Build Order
 
-1. Add opt-in local playtest telemetry and a tuning readout.
+1. Add opt-in local playtest telemetry around the shipped Rhythm Lab and tuning readout.
 2. Add the first three-match neighborhood ladder.
 3. Expand Wall School into beginner and advanced tiers.
 4. Add local versus on the shared deterministic rules core.
@@ -114,3 +117,11 @@ Prototype the social ritual before real money:
 - no purchase, cash value, redemption, or transfer in the prototype
 
 Purchasable or redeemable stakes are a separate regulated product gate. It would require a jurisdiction-by-jurisdiction legal model, age and identity checks, geolocation, payments and custody design, anti-fraud controls, responsible-gaming tools, tax/reporting analysis, and platform-policy review before implementation.
+
+## Research and expert-feedback discipline
+
+- Footage and published instruction create hypotheses; they do not count as player endorsement.
+- Champion names, quotes, or approval language never enter marketing or the game without explicit permission.
+- Every expert test records the build version, controller, camera, Rhythm Lab code, experience level, and exact scenario.
+- Conflicting feedback is preserved by cohort rather than averaged into one vague “more realistic” request.
+- The [champion playtest protocol](champion-playtest-protocol.md) is the operating plan for recruitment, interviews, instrumented sessions, and design decisions.

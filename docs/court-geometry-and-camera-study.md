@@ -40,8 +40,13 @@ Documentary and highlight footage can move closer: hands, shoulders, faces, and 
 Implemented camera vocabulary:
 
 - `Broadcast`: stable, centered, full-court tactical view.
+- `Player`: receiver-weighted baseline view with stronger vertical compression and foreground sprite/ball scaling.
 - `Follow`: tighter crop weighted between the player, live ball, and front wall.
 - `Courtside`: closer crop with slight horizontal shear and vertical compression for a low sideline/comic-panel feel.
 - User zoom: 80–150% on every preset.
 
-The art direction uses pixel-snapped actor geometry for retro readability, then adds modern comic ink, flat color blocks, speed lines, square particles, halftone/noise texture, and impact typography.
+The `Player` view is now the default because the previous full-court view made the game read like a fast tabletop simulation. Its affine foreshortening does not alter world coordinates, collision tests, or the official court ratios. The next true-3D prototype should keep the same camera contract: wall edges and the live bounce remain readable, while the near player has enough scale to communicate footwork and hand preparation.
+
+The Rhythm Lab exposes camera depth independently from camera zoom. Depth changes vertical compression and foreground scale; zoom changes crop. Keeping those controls separate makes it possible to test a television-style tactical view against a tennis-style player view without contaminating physics feedback.
+
+The art direction uses pixel-snapped actor geometry for 16-bit readability, then adds modern comic ink, flat color blocks, converging floor guides, speed lines, square particles, halftone/scanline texture, and graffiti-influenced impact typography.
