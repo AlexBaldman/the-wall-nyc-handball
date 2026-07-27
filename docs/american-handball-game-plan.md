@@ -2,6 +2,19 @@
 
 This plan is for building a realistic video game inspired by one-wall American handball culture in New York City and Long Island.
 
+## Current Status — July 2026
+
+The first browser-game vertical slice is playable. It has moved well beyond the original three-shot rally prototype and now includes:
+
+- A regulation-proportioned one-wall court with front-wall, floor, crack, and out-of-bounds behavior
+- A deterministic 120 Hz physics simulation with drag, bounce, spin, charge timing, contact quality, and seven distinct shots
+- A complete player-versus-computer match loop with serves, faults, rallies, scoring, block/hinder calls, difficulty levels, and adaptive tendencies
+- Keyboard, touch, and gamepad controls with analog movement and aiming
+- Four camera presets, multiple NYC-inspired venues, a player creator, and Wall School training drills
+- Match presentation, post-match statistics, accessibility support, smoke tests, and an automated GitHub Pages test deployment
+
+The immediate job is no longer proving that handball can be fun in the browser. It is turning this strong vertical slice into a measured, replayable single-player game.
+
 ## Vision
 
 Build a game that starts simple (retro top-down prototype) and grows into a realistic 3D competitive experience with:
@@ -23,7 +36,7 @@ Build a game that starts simple (retro top-down prototype) and grows into a real
 
 ## Suggested Development Phases
 
-### Phase 0: Design + Research (1–3 weeks)
+### Phase 0: Design + Research — Complete
 
 - Lock scope for the first playable build.
 - Document baseline one-wall rules:
@@ -34,25 +47,45 @@ Build a game that starts simple (retro top-down prototype) and grows into a real
 - Define a small glossary of shot types:
   - Straight, cross-court, kill shot, lob, and ceiling-style defensive shots (where applicable to level design)
 
-### Phase 1: 2D Prototype (4–8 weeks)
+### Phase 1: Browser Prototype — Complete
 
-Build a top-down or slightly angled pixel-art prototype to validate game feel before 3D investment.
+The current angled 2.5D canvas game validates the core feel before a larger 3D investment.
 
 **Features**
 
-- Single court and single-player drills
-- Basic AI return behavior
-- Scorekeeping (11 or 21 target configurable)
-- Shot timing meter (early/perfect/late)
-- Ball physics v1: velocity, bounce, and simple spin scalar
+- Multiple court looks and single-player drills
+- Beginner through elite adaptive AI
+- Complete match scoring
+- Per-shot charge and contact feedback
+- Ball physics with velocity, drag, bounce, seams, and two-axis spin
 
 **Success criteria**
 
 - Rallies feel fun for 5+ minutes
-- Players can intentionally hit at least three distinct shot types
+- Players can intentionally hit seven distinct shot types
 - AI can sustain beginner/intermediate rallies
 
-### Phase 2: Vertical Slice in 3D (6–12 weeks)
+### Phase 2: Single-Player Game
+
+Turn the vertical slice into a game players want to finish and replay.
+
+**Features**
+
+- A park-to-park opponent ladder with distinct archetypes and personalities
+- First-session onboarding that flows naturally into Wall School
+- Between-point presentation, match introductions, victory moments, and progression rewards
+- Playtest telemetry for rally length, shot choice, contact quality, misses, and difficulty
+- More animation poses and character silhouettes without sacrificing input responsiveness
+- Local-versus architecture that keeps doubles and online play possible later
+
+**Success criteria**
+
+- A new player can serve, rally, and understand a lost point without outside instructions
+- Each AI tier creates a recognizable tactical problem instead of merely moving faster
+- Players can complete a 20–30 minute ladder session and want another run
+- Physics tuning is backed by real playtest data rather than intuition alone
+
+### Phase 3: 3D Production Exploration
 
 Create one high-quality court with third-person gameplay and polished mechanics.
 
@@ -72,7 +105,7 @@ Create one high-quality court with third-person gameplay and polished mechanics.
 - Input latency feels responsive on controller/keyboard
 - Two players can complete full matches without major exploits
 
-### Phase 3: Competitive Loop + Worldbuilding (8–16 weeks)
+### Phase 4: Competitive Loop + Worldbuilding
 
 Expand content and progression.
 
@@ -89,7 +122,7 @@ Expand content and progression.
 - Player growth system:
   - Stamina, footwork, control, and power (balanced so skill still dominates)
 
-### Phase 4: Online + Live Meta (optional)
+### Phase 5: Online + Live Meta (optional)
 
 - Ranked/quickplay matchmaking
 - Seasonal leaderboards by borough
@@ -132,13 +165,13 @@ Combine button timing + directional input + modifier to generate shot variety wi
 6. Local multiplayer release candidate
 7. Online beta (optional)
 
-## Practical Next Step (This Week)
+## Practical Next Step
 
-If you want to start immediately, build a **2D rally prototype** with only:
+Run structured playtests of the deployed browser build and tune the single-player foundation:
 
-- One court
-- One player + one AI
-- Serve, return, score
-- Three shot outcomes (flat, lob, kill)
+- Record rally length, shot selection, pure-contact rate, player miss reason, and AI tier
+- Test keyboard and controller separately with new and experienced players
+- Tune movement acceleration, recovery timing, shot risk, and AI anticipation from those results
+- Build the first three-opponent park ladder once the physics targets are stable
 
-Then run short playtests and tune only ball feel and movement before adding content.
+That gives the next content pass a trustworthy foundation while preserving room for local multiplayer, doubles, and eventual rollback-ready online play.

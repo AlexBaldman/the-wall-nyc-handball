@@ -1,0 +1,11 @@
+{
+  "name": "the-wall-nyc-handball",
+  "version": "0.2.0",
+  "private": true,
+  "description": "A dependency-free NYC one-wall handball browser game.",
+  "scripts": {
+    "check": "node --check app.js && npm run test:smoke",
+    "test:smoke": "node scripts/smoke.mjs",
+    "serve": "python3 -m http.server 4173 --bind 127.0.0.1"
+  }
+}

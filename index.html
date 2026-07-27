@@ -2,87 +2,360 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NYC One-Wall Handball Prototype</title>
-    <meta name="description" content="A standalone NYC-style one-wall handball prototype with serving, rally scoring, spin, and a practice AI.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07121d">
+    <title>The Wall — NYC One-Wall Handball</title>
+    <meta name="description" content="A fast, expressive one-wall handball game set on a sunset NYC park court.">
+    <link rel="canonical" href="https://alexbaldman.github.io/the-wall-nyc-handball/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="The Wall — NYC One-Wall Handball">
+    <meta property="og:description" content="Play a fast, expressive one-wall handball match with real court geometry, spin, crack shots, adaptive rivals, and NYC park energy.">
+    <meta property="og:url" content="https://alexbaldman.github.io/the-wall-nyc-handball/">
+    <meta property="og:image" content="https://alexbaldman.github.io/the-wall-nyc-handball/outputs/the-wall-gameplay-final-clean.png">
+    <meta property="og:image:alt" content="The Wall game showing two pixel-art players on a sunset one-wall handball court.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The Wall — NYC One-Wall Handball">
+    <meta name="twitter:description" content="Real court geometry, expressive contacts, adaptive rivals, and NYC park energy.">
+    <meta name="twitter:image" content="https://alexbaldman.github.io/the-wall-nyc-handball/outputs/the-wall-gameplay-final-clean.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script defer src="app.js"></script>
 </head>
 <body>
-    <main class="page-shell">
-        <section class="hero-panel">
-            <p class="eyebrow">Standalone Project</p>
-            <h1>NYC One-Wall Handball</h1>
-            <p class="lede">A playable rally prototype focused on feel first: serve flow, front-wall rules, first-bounce faults, spin, and a scrappy practice opponent.</p>
-
-            <div class="score-strip" aria-label="Current match score">
-                <article class="score-card">
-                    <span>You</span>
-                    <strong id="playerScore">0</strong>
-                </article>
-                <article class="score-card">
-                    <span>Wall Ghost</span>
-                    <strong id="aiScore">0</strong>
-                </article>
-                <article class="score-card status-card">
-                    <span>Rally</span>
-                    <strong id="rallyCount">0</strong>
-                </article>
-                <article class="score-card status-card">
-                    <span>Shot</span>
-                    <strong id="shotMode">Flat</strong>
-                </article>
-            </div>
-        </section>
-
-        <section class="play-panel">
-            <div class="canvas-wrap">
-                <canvas id="gameCanvas" width="960" height="600" aria-label="NYC one-wall handball court"></canvas>
-                <div class="hud">
-                    <p id="statusLine">Press Serve to start the point.</p>
-                    <p id="detailLine">Movement: WASD or arrows. Swing: Space. Hold Z/X for english, Shift for extra pace.</p>
-                    <p id="metaLine">Race to 11. Select a shot with 1 = Flat, 2 = Lob, 3 = Kill.</p>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand-lockup" aria-label="The Wall, NYC one-wall handball">
+                <span class="brand-mark" aria-hidden="true">W</span>
+                <div>
+                    <p class="brand-name">The Wall</p>
+                    <button class="brand-place" id="venueButton" type="button" aria-label="Change court">
+                        West 4th · The Cage
+                    </button>
                 </div>
             </div>
 
-            <div class="control-row">
-                <button id="serveButton" type="button">Serve</button>
-                <button id="resetButton" type="button">Reset Match</button>
+            <div class="topbar-actions">
+                <button class="utility-button utility-button--avatar" id="avatarButton" type="button">
+                    <span class="utility-icon" aria-hidden="true">◆</span>
+                    <span class="utility-label">My Player</span>
+                </button>
+                <button class="utility-button utility-button--training" id="trainingButton" type="button">
+                    <span class="utility-icon" aria-hidden="true">★</span>
+                    <span class="utility-label">Wall School</span>
+                </button>
+                <span class="gamepad-status" id="gamepadStatus" aria-live="polite">
+                    <i aria-hidden="true"></i><span>Keys</span>
+                </span>
+                <button class="utility-button" id="soundButton" type="button" aria-pressed="true">
+                    <span class="utility-icon" aria-hidden="true">◖))</span>
+                    <span class="utility-label">Sound on</span>
+                </button>
+                <button class="utility-button" id="helpButton" type="button">
+                    <span class="utility-icon" aria-hidden="true">?</span>
+                    <span class="utility-label">How to play</span>
+                </button>
             </div>
-        </section>
+        </header>
 
-        <aside class="info-panel">
-            <article class="info-card">
-                <p class="card-kicker">Controls</p>
-                <ul>
-                    <li><strong>Move:</strong> `WASD` or arrow keys</li>
-                    <li><strong>Swing:</strong> `Space`</li>
-                    <li><strong>Shot select:</strong> `1` flat, `2` lob, `3` kill</li>
-                    <li><strong>Spin:</strong> hold `Z` for left english, `X` for right english</li>
-                    <li><strong>Power:</strong> hold `Shift` while swinging</li>
-                    <li><strong>Serve / Reset:</strong> `R` / `Backspace`</li>
-                </ul>
-            </article>
+        <main class="game-shell">
+            <section class="match-board" aria-label="Current match">
+                <div class="player-score player-score--you">
+                    <span class="player-dot" aria-hidden="true"></span>
+                    <div>
+                        <span class="score-label" id="playerName">You</span>
+                        <strong id="playerScore">0</strong>
+                    </div>
+                </div>
 
-            <article class="info-card">
-                <p class="card-kicker">Prototype Rules</p>
-                <ul>
-                    <li>Serves must hit the front wall first.</li>
-                    <li>The first serve bounce must land beyond the short line and before the back line.</li>
-                    <li>During rallies, returns must reach the front wall before the second bounce.</li>
-                    <li>Miss the front wall, hit out, or let it die twice and you give up the point.</li>
-                    <li>First side to 11 wins the match.</li>
-                </ul>
-            </article>
+                <div class="match-context">
+                    <span class="match-rule" id="serveStatus">You serve · first serve</span>
+                    <span class="match-rally"><strong id="rallyCount">0</strong> rally</span>
+                </div>
 
-            <article class="info-card">
-                <p class="card-kicker">Build Intent</p>
-                <p>This extracted project is tuned as a feel-first prototype, not a full simulation. The goal is to validate pacing, spacing, and shot expression before bigger production work.</p>
-            </article>
-        </aside>
-    </main>
+                <div class="player-score player-score--ghost">
+                    <div>
+                        <span class="score-label" id="aiName">Wall Ghost</span>
+                        <strong id="aiScore">0</strong>
+                    </div>
+                    <span class="player-dot" aria-hidden="true"></span>
+                </div>
+            </section>
+
+            <section class="arena-panel" aria-label="Handball court">
+                <div class="court-stage" id="courtStage">
+                    <canvas id="gameCanvas" width="960" height="600" tabindex="0" aria-label="Playable NYC one-wall handball court"></canvas>
+                    <div class="court-vignette" aria-hidden="true"></div>
+
+                    <div class="court-readouts" aria-label="Current game settings">
+                        <span><i aria-hidden="true"></i><b id="shotMode">Flat</b> shot</span>
+                        <span><i aria-hidden="true"></i><b id="difficultyMode">Wall Ghost</b> rival</span>
+                    </div>
+
+                    <div class="camera-controls" aria-label="Camera controls">
+                        <button id="zoomOutButton" type="button" aria-label="Zoom camera out">−</button>
+                        <button class="camera-mode-button" id="cameraButton" type="button" aria-label="Change camera">
+                            <span id="cameraMode">Broadcast</span>
+                            <small id="cameraZoom">100%</small>
+                        </button>
+                        <button id="zoomInButton" type="button" aria-label="Zoom camera in">+</button>
+                    </div>
+
+                    <div class="training-hud" id="trainingHud" hidden>
+                        <span id="trainingName">Paint the Corners</span>
+                        <strong><b id="trainingScore">0</b> / <b id="trainingGoal">8</b></strong>
+                        <small id="trainingPrompt">Hit the glowing target</small>
+                        <button id="exitTrainingButton" type="button">Exit drill</button>
+                    </div>
+
+                    <div class="timing-meter" id="timingMeter" data-grade="loading" hidden>
+                        <div class="timing-copy">
+                            <span id="timingLabel">Palm load</span>
+                            <strong id="timingGrade">Control now · hold for pace</strong>
+                        </div>
+                        <div class="timing-track" aria-hidden="true">
+                            <i class="timing-sweet-spot"></i>
+                            <b id="timingFill"></b>
+                        </div>
+                        <div class="timing-read">
+                            <span id="timingBalance">Feet set</span>
+                            <span id="timingIntercept">Read: bounce</span>
+                        </div>
+                    </div>
+
+                    <div class="point-banner" id="pointBanner" aria-live="assertive" aria-hidden="true">
+                        <span id="pointEyebrow">Point</span>
+                        <strong id="pointMessage">Your ball</strong>
+                    </div>
+
+                    <div class="status-dock" aria-live="polite">
+                        <div class="status-copy">
+                            <p id="statusLine">Your court. Your serve.</p>
+                            <p id="detailLine">Move into position, then slap it clean.</p>
+                        </div>
+                        <p id="metaLine">Race to 11 · Flat shot selected</p>
+                    </div>
+                </div>
+
+                <div class="control-deck">
+                    <div class="primary-actions">
+                        <button class="serve-button" id="serveButton" type="button">
+                            <span>Serve</span>
+                            <kbd>R</kbd>
+                        </button>
+                        <button class="reset-button" id="resetButton" type="button" aria-label="Reset match">↻</button>
+                    </div>
+
+                    <div class="selector-group" aria-label="Shot selection">
+                        <span class="selector-label">Hand contact · tap to arm, tap during rally to hit</span>
+                        <div class="segmented-control shot-grid">
+                            <button class="shot-button active" type="button" data-shot="palm" aria-pressed="true">Palm <kbd>1</kbd></button>
+                            <button class="shot-button" type="button" data-shot="slice" aria-pressed="false">Slice <kbd>2</kbd></button>
+                            <button class="shot-button" type="button" data-shot="fist" aria-pressed="false">Fist <kbd>3</kbd></button>
+                            <button class="shot-button" type="button" data-shot="backhand" aria-pressed="false">Backhand <kbd>4</kbd></button>
+                            <button class="shot-button advanced-shot" type="button" data-shot="kill" aria-pressed="false">Kill <kbd>5</kbd></button>
+                            <button class="shot-button advanced-shot" type="button" data-shot="roller" aria-pressed="false">Roller <kbd>6</kbd></button>
+                            <button class="shot-button advanced-shot" type="button" data-shot="lob" aria-pressed="false">Lob <kbd>7</kbd></button>
+                        </div>
+                    </div>
+
+                    <div class="selector-group difficulty-control" aria-label="Opponent difficulty">
+                        <span class="selector-label">Rival</span>
+                        <div class="segmented-control">
+                            <button class="difficulty-button" type="button" data-difficulty="easy" aria-pressed="false">Easy</button>
+                            <button class="difficulty-button active" type="button" data-difficulty="medium" aria-pressed="true">Medium</button>
+                            <button class="difficulty-button" type="button" data-difficulty="hard" aria-pressed="false">Hard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mobile-controls" aria-label="Touch controls">
+                    <div class="move-pad" aria-label="Move player">
+                        <span class="move-pad-label">Move</span>
+                        <button class="move-button move-up" type="button" data-key="w" aria-label="Move up">▲</button>
+                        <button class="move-button move-left" type="button" data-key="a" aria-label="Move left">◀</button>
+                        <button class="move-button move-right" type="button" data-key="d" aria-label="Move right">▶</button>
+                        <button class="move-button move-down" type="button" data-key="s" aria-label="Move down">▼</button>
+                    </div>
+                    <div class="touch-actions">
+                        <div class="spin-actions" aria-label="Add spin">
+                            <button class="spin-button" type="button" data-key="z">← English</button>
+                            <button class="spin-button" type="button" data-key="x">English →</button>
+                            <button class="spin-button yield-button" type="button" data-key="e" aria-label="Hold a legal stationary position">Set · Hold</button>
+                        </div>
+                        <button class="swing-button" id="swingButton" type="button">Hold · Slap</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="court-note" aria-label="Keyboard controls">
+                <p><span>Move</span> WASD / arrows</p>
+                <p><span>Slap</span> Hold / release Space</p>
+                <p><span>Contacts</span> 1–7 / J K L U I O P</p>
+                <p><span>Extra pace</span> Shift</p>
+                <p><span>Set position</span> Hold E off-ball</p>
+                <p><span>Gamepad</span> Sticks + face buttons</p>
+                <p><span>Camera</span> C / − / +</p>
+                <button id="rulesButton" type="button">Court rules ↗</button>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <span>Built for long rallies, loud walls, and one-more-game energy.</span>
+            <span>NYC One-Wall · Arcade soul / simulation bones</span>
+        </footer>
+    </div>
+
+    <dialog class="help-dialog" id="helpDialog">
+        <div class="dialog-header">
+            <div>
+                <span class="dialog-kicker">Court 01</span>
+                <h2>Play the wall.</h2>
+            </div>
+            <button class="dialog-close" id="closeHelpButton" type="button" aria-label="Close how to play">×</button>
+        </div>
+        <div class="dialog-grid">
+            <section>
+                <h3>Find the rhythm</h3>
+                <ol>
+                    <li><span>01</span> Serve into the front wall.</li>
+                    <li><span>02</span> Let it bounce once at most.</li>
+                    <li><span>03</span> Tap for control or load into the shot-specific power window.</li>
+                    <li><span>04</span> After your shot, hold Set to stop cleanly and avoid a moving block.</li>
+                </ol>
+            </section>
+            <section>
+                <h3>Shape the point</h3>
+                <dl>
+                    <div><dt>Palm</dt><dd>Topspin safety with a high, deep rebound.</dd></div>
+                    <div><dt>Slice</dt><dd>Undercut skid plus side english.</dd></div>
+                    <div><dt>Fist</dt><dd>Fast knuckle ball with a live, wobbling flight.</dd></div>
+                    <div><dt>Backhand</dt><dd>Quick preparation and reverse angles.</dd></div>
+                    <div><dt>Kill / Roller</dt><dd>Crack-level finishes that demand clean contact.</dd></div>
+                </dl>
+            </section>
+            <section>
+                <h3>Controller</h3>
+                <dl>
+                    <div><dt>Left stick</dt><dd>True analog footwork: feather it to set your feet.</dd></div>
+                    <div><dt>Right stick</dt><dd>Aim the live wall target, height, and side english.</dd></div>
+                    <div><dt>L3 / stick click</dt><dd>Hold a legal stationary position while your rival owns the touch.</dd></div>
+                    <div><dt>Face buttons</dt><dd>Hold and release palm, slice, fist, and backhand contacts.</dd></div>
+                    <div><dt>Shoulders</dt><dd>Lob, kill, roller, and power.</dd></div>
+                </dl>
+            </section>
+            <section>
+                <h3>Build your player</h3>
+                <dl>
+                    <div><dt>My Player</dt><dd>Mix face, hair, clothing, colorways, emblems, footwear, headwear, ink, and accessories.</dd></div>
+                    <div><dt>Saved locally</dt><dd>Your court name and look stay on this device.</dd></div>
+                </dl>
+            </section>
+            <section>
+                <h3>Know the rival</h3>
+                <dl>
+                    <div><dt>Rookie Rae</dt><dd>The Floater: safe palms and only a faint read on your habits.</dd></div>
+                    <div><dt>Wall Ghost</dt><dd>The Counterpuncher: redirects and starts learning your patterns.</dd></div>
+                    <div><dt>King Shade</dt><dd>The Crack Hunter: anticipates trajectories and counters repeated shots.</dd></div>
+                </dl>
+            </section>
+            <section>
+                <h3>Read the court</h3>
+                <dl>
+                    <div><dt>Broadcast</dt><dd>Full-court match framing.</dd></div>
+                    <div><dt>Follow</dt><dd>Tracks you and the live ball.</dd></div>
+                    <div><dt>Courtside</dt><dd>Closer, angled comic-book view.</dd></div>
+                </dl>
+            </section>
+        </div>
+        <p class="dialog-rule">Official geometry: 20′ wide, 34′ to the long line, 16′ wall and short line. Only the server scores; two service faults cause a side out. This quick format plays to 11.</p>
+    </dialog>
+
+    <dialog class="avatar-dialog" id="avatarDialog">
+        <div class="dialog-header">
+            <div>
+                <span class="dialog-kicker">The Locker · Make your mark</span>
+                <h2>Build your court self.</h2>
+            </div>
+            <button class="dialog-close" id="closeAvatarButton" type="button" aria-label="Close character creator">×</button>
+        </div>
+        <div class="avatar-layout">
+            <section class="avatar-preview-panel">
+                <canvas id="avatarPreview" width="280" height="330" aria-label="Character preview"></canvas>
+                <div class="avatar-pose-controls" aria-label="Preview animation">
+                    <button type="button" data-avatar-pose="idle" aria-pressed="true">Idle</button>
+                    <button type="button" data-avatar-pose="palm" aria-pressed="false">Palm</button>
+                    <button type="button" data-avatar-pose="backhand" aria-pressed="false">Backhand</button>
+                    <button type="button" data-avatar-pose="roller" aria-pressed="false">Roller</button>
+                    <button type="button" data-avatar-pose="victory" aria-pressed="false">Victory</button>
+                </div>
+                <label class="avatar-name">
+                    <span>Court name</span>
+                    <input id="avatarNameInput" type="text" maxlength="14" value="You" autocomplete="off">
+                </label>
+                <div class="avatar-actions">
+                    <button id="randomizeAvatarButton" type="button">Random fit</button>
+                    <button id="resetAvatarButton" type="button">Reset</button>
+                </div>
+            </section>
+            <section class="avatar-workbench">
+                <div class="avatar-presets" aria-label="Style presets">
+                    <button type="button" data-avatar-preset="parkAce">Park Ace</button>
+                    <button type="button" data-avatar-preset="uptownBreaker">Uptown Breaker</button>
+                    <button type="button" data-avatar-preset="lesSkater">LES Skater</button>
+                    <button type="button" data-avatar-preset="boardwalkHippy">Boardwalk Hippy</button>
+                    <button type="button" data-avatar-preset="downtownBruiser">Downtown Bruiser</button>
+                    <button type="button" data-avatar-preset="cageVeteran">Cage Veteran</button>
+                </div>
+                <div class="avatar-option-groups" id="avatarOptionGroups"></div>
+            </section>
+        </div>
+        <div class="avatar-savebar">
+            <p>Mix the pieces. Make somebody you recognize. Your look stays on this device.</p>
+            <button id="saveAvatarButton" type="button">Take it to the court</button>
+        </div>
+    </dialog>
+
+    <dialog class="training-dialog" id="trainingDialog">
+        <div class="dialog-header">
+            <div>
+                <span class="dialog-kicker">Wall School · LES Session</span>
+                <h2>Earn your handstyle.</h2>
+            </div>
+            <button class="dialog-close" id="closeTrainingButton" type="button" aria-label="Close training">×</button>
+        </div>
+        <p class="training-intro">Arcade drills inspired by the playful skill games in Virtua Tennis 3. Every lesson maps directly to match play.</p>
+        <div class="training-grid">
+            <button class="training-card training-card--corners" type="button" data-training="corners">
+                <span>01 · Accuracy</span>
+                <strong>Tag the Boroughs</strong>
+                <small>Paint alternating wall targets with any controlled contact.</small>
+            </button>
+            <button class="training-card training-card--spin" type="button" data-training="spin">
+                <span>02 · Spin</span>
+                <strong>Spin Doctor</strong>
+                <small>Match the called palm, slice, fist, and backhand contacts.</small>
+            </button>
+            <button class="training-card training-card--kill" type="button" data-training="kill">
+                <span>03 · Touch</span>
+                <strong>Crack Hunter</strong>
+                <small>Hit kills and rollers into the glowing low-wall window.</small>
+            </button>
+            <button class="training-card training-card--rally" type="button" data-training="rally">
+                <span>04 · Rhythm</span>
+                <strong>Stay Alive</strong>
+                <small>Build a ten-shot solo rally without a second bounce or down.</small>
+            </button>
+        </div>
+        <div class="controller-map">
+            <span><kbd>A / ×</kbd> Palm</span>
+            <span><kbd>X / □</kbd> Slice</span>
+            <span><kbd>B / ○</kbd> Fist</span>
+            <span><kbd>Y / △</kbd> Backhand</span>
+            <span><kbd>RB / R1</kbd> Kill</span>
+            <span><kbd>RT / R2</kbd> Roller</span>
+        </div>
+    </dialog>
 </body>
 </html>
