@@ -7,21 +7,22 @@ The repository intentionally contains two playable experiences:
 - the **2.5D match** is the content-rich baseline: rivals, training, avatar
   creator, venue identity, presentation, touch controls, and the existing career
   direction
-- the **3D Accuracy Lab** is the accuracy-first foundation: regulation units,
-  physical contacts, deterministic commands and snapshots, perception-limited
-  AI, replay, and calibration
+- the **3D Street Match** is the accuracy-first MVP path: regulation units,
+  physical contacts, race-to-11 play, deterministic commands and snapshots,
+  perception-limited difficulty profiles, replay, onboarding, and calibration
 
 They are not competing implementations that should silently drift forever. The
 2.5D match proves product ideas; the 3D simulation proves physical behavior.
 Features migrate into the 3D path only after their rules and input contracts are
-explicit.
+explicit. The first convergence pass now makes the 3D path a complete player-facing
+match; the 2.5D path remains the comparison build for content not yet migrated.
 
-## Repository topology — July 27, 2026
+## Repository topology — July 28, 2026
 
-The gameplay, Rhythm Lab, 3D Accuracy Lab, and architecture consolidation are
-landed together on `origin/main`. The merged feature branch was removed, local
-`main` tracks the same commit, and there are no legacy release branches, tags,
-or linked worktrees to reconcile.
+The gameplay, Rhythm Lab, 3D Street Match, and architecture consolidation share
+one release line. Short-lived feature branches may contain the next release
+until review; there are no parallel product branches whose simulation behavior
+should drift independently.
 
 New work should use a short-lived branch and pull request. Pull requests validate
 the complete deterministic suite and build the static artifact without changing
@@ -105,10 +106,11 @@ Coordinates the 3D experiment. It owns Three.js scene construction, physical
 actors/hands, AI observation delivery, input bindings, instrumentation, and lab
 controls while delegating competitive truth to `src/sim`.
 
-The next safe split is a pure `WallGhostController` that consumes delayed
-observations and emits `PlayerCommand` records. That extraction should happen
-alongside Rookie/Regular/Champion profiles so it gains a real interface and
-tests rather than becoming file shuffling.
+`src/game/wall-ghost.js` now owns the pure Rookie/Regular/Champion perception,
+movement, aim, and decision profiles. The next safe split is a pure
+`WallGhostController` that consumes delayed observations plus one of those
+profiles and emits `PlayerCommand` records. Keep the Three.js coordinator
+responsible only for delivering observations and applying the resulting command.
 
 ### `src/styles/tokens.css`
 
@@ -140,7 +142,7 @@ keyboard / touch / gamepad
  canvas / Three.js / replay / network spectator
 ```
 
-The Accuracy Lab already records this shape. The preserved match should migrate
+The 3D Street Match already records this shape. The preserved match should migrate
 to it incrementally instead of being rewritten all at once.
 
 ## Testing pyramid

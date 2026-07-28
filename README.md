@@ -4,13 +4,13 @@ This is the extracted standalone version of the American handball concept that h
 
 [Play the current GitHub Pages test build](https://alexbaldman.github.io/the-wall-nyc-handball/)
 
-[Enter the true-scale 3D Accuracy Lab](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html)
+[Play the true-scale 3D Street Match](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html)
 
 ## What it is
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
 
-Version `0.4.1` keeps the content-rich 2.5D match and the true-scale 3D Accuracy Lab as separate experiences on one shared architecture. The lab currently includes:
+Version `0.5.0` promotes the true-scale 3D work from an instrumented lab into a player-facing West 4th Street singles match while preserving the content-rich 2.5D game as the classic comparison build. The 3D match currently includes:
 
 - true SI-unit court geometry: 20′ × 16′ wall, 16′ short line, 25′ service markers, and 34′ long line
 - the physical 1⅞″, 61 g one-wall ball plus a visible halo that never enlarges its collision shape
@@ -23,15 +23,18 @@ Version `0.4.1` keeps the content-rich 2.5D match and the true-scale 3D Accuracy
 - mouse wall intention, keyboard control, and standard two-stick/face-button gamepad input
 - Tactical, Player, and Courtside perspective cameras with optical zoom
 - an adjustable 55–110% court-tempo clock; 100% is physical real time and lower settings slow presentation without changing geometry or material coefficients
-- a complete first-to-5 sparring match against Wall Ghost with server-only scoring, side outs, two serves, legal service-box checks, floor-before-wall downs, and second-bounce winners
+- a complete race-to-11 street match with server-only scoring, side outs, two serves, legal service-box checks, floor-before-wall downs, and second-bounce winners
 - a same-physics opponent that moves and contacts through its own actor and swept hand instead of teleporting the ball
-- perception-limited opponent reads sampled at 20 Hz, delayed by roughly 100 ms, perturbed with seeded noise, and projected forward through the same ballistics model
+- Rookie, Regular, and Champion opponents whose explicit perception delay, noise, foot speed, recovery depth, and aggression profiles increase difficulty without changing the ball
+- a focused court-entry flow, progressive three-step contact tutorial, off-ball Set stance, live opponent scouting, and post-match contact statistics
+- emergent kill, roller, lob, hook, cut, and knuckle labels assigned after physical contact instead of selected as canned trajectories
+- perception-limited opponent reads sampled at profile-specific rates, perturbed with seeded noise, and projected forward through the same ballistics model
 - live contact explanations for clean spacing, jams, reaches, air swings, floor-before-wall downs, wall height, and first bounce
-- versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data plus replay JSON export
+- versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data—including score, server, expected hitter, and point state—plus replay JSON export
 - deterministic competitive randomness in both the new lab and the preserved match baseline
 - automated geometry, drop, spin, tunneling, swept-hand, service/scoring, serialization, player/Ghost serve, delayed-perception, WebGL, interaction, and responsive-layout checks
 
-The 3D lab is now the first complete accuracy-first point, while the shipped 2.5D game remains the richer content baseline. The next gate is repeated human tuning of movement, contact forgiveness, rally rhythm, and opponent difficulty before migrating career content.
+The 3D match is now the accuracy-first MVP path, while the shipped 2.5D game remains the richer content baseline. The next gate is repeated human tuning of movement, contact forgiveness, rally rhythm, and opponent difficulty before migrating the rival ladder, avatar, and training content.
 
 The next presentation pass is now specified in the [visual system and Day / Night art direction](docs/visual-day-night-art-direction.md): a brighter, cooler Day court and a purpose-built floodlit Night court, both driven by shared semantic color roles and held to the same competitive-readability and deterministic-simulation contract.
 
@@ -80,18 +83,32 @@ Current build includes:
 
 ## Controls
 
-### 3D Accuracy Lab
+### 3D Street Match
 
 - `WASD`: move
 - mouse: point at the wall
 - hold/release `Space`, `J`, `K`, or `L`: open palm, topspin, backspin, or fist
 - `Z` / `X`: left or right English
 - `Q` / `E`: lift or drive modifier
-- `R`: start the Ghost match or next point
+- `Shift`: hold a planted Set position while the opponent owns the touch
+- `R`: start the street match or next point
 - `F`: interrupt with a solo practice feed
 - `C`: cycle Tactical, Player, and Courtside cameras
-- `Backspace`: reset the lab
+- `Backspace`: reset the match
 - `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
+
+For the 3D match on a standard controller:
+
+- left stick: physical court movement
+- right stick: continuous wall placement and height
+- hold/release `A / Cross`, `X / Square`, `B / Circle`, or `Y / Triangle`: open palm, topspin, backspin, or fist
+- `LB / RB`: left or right English
+- `LT / RT`: lift or drive through the ball
+- hold `R3`: plant in the off-ball Set stance
+
+On phones, the court supplies a physical movement pad and keeps the four
+hold/release contact families docked at the bottom of the screen. Tap the wall
+to move the target before releasing a contact.
 
 ### Preserved 2.5D match
 
@@ -112,7 +129,7 @@ Current build includes:
 
 On touch devices, use the on-screen move pad, spin holds, and hold/release the `Slap` button. Camera controls stay on the court. Tap the court name in the header to rotate through West 4th, Coney Island, and Venice Beach. `My Player` opens the character creator; saved looks remain on that device.
 
-### Gamepad
+### 2.5D gamepad
 
 The first connected standard Xbox, PlayStation, or compatible controller is detected automatically:
 
@@ -180,12 +197,13 @@ GitHub Actions validates every pull request and stages the exact static artifact
 - `src/game/match-app.js`: preserved 2.5D match coordinator, controls, AI, Canvas rendering, and content systems
 - `src/game/match-content.js`: static shots, opponents, drills, avatars, and timing profiles
 - `src/game/match-environment.js`: 2.5D court projection, physics tuning, cameras, rhythm presets, and venue palettes
-- `lab.html` / `lab.css`: separate true-scale 3D Accuracy Lab
+- `lab.html` / `lab.css`: true-scale 3D Street Match and collapsible calibration tools
+- `src/game/wall-ghost.js`: explicit Rookie, Regular, and Champion perception/movement profiles
 - `src/platform/`: shared optional browser capability adapters such as Gamepad input and rumble
 - `src/presentation/`: projections from official game measurements into renderer coordinates
 - `src/sim/`: serializable contracts, official measurements, seeded randomness, replay records, and BallisticsCore
 - `src/styles/tokens.css`: semantic visual foundation shared by both playable experiences
-- `src/labs/ball-lab.js`: Three.js scene, hand/control experiment, cameras, UI, and telemetry
+- `src/labs/ball-lab.js`: Three.js match coordinator, physical actors/hands, cameras, onboarding, presentation, and telemetry
 - `vendor/`: pinned browser runtime for Three.js plus its MIT license
 - `package.json`: pinned dependencies, validation, browser QA, and serving commands
 - `scripts/syntax.test.mjs`: automatic syntax discovery for every first-party JavaScript module

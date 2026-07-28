@@ -33,6 +33,7 @@ export function createPlayerCommand(overrides = {}) {
       english: Math.max(-1, Math.min(1, finiteNumber(overrides.modifiers?.english))),
       lift: Boolean(overrides.modifiers?.lift),
       drive: Boolean(overrides.modifiers?.drive),
+      setPosition: Boolean(overrides.modifiers?.setPosition),
     },
     charge: Math.max(0, Math.min(1, finiteNumber(overrides.charge))),
   };
@@ -102,6 +103,31 @@ export function createSimulationSnapshot(overrides = {}) {
           velocity: vec3(overrides.opponentHand.velocity),
           radius: Math.max(0, finiteNumber(overrides.opponentHand.radius, 0.105)),
           active: Boolean(overrides.opponentHand.active),
+        }
+      : null,
+    match: overrides.match
+      ? {
+          active: Boolean(overrides.match.active),
+          phase: String(overrides.match.phase ?? 'ready'),
+          targetScore: Math.max(1, Math.trunc(finiteNumber(overrides.match.targetScore, 1))),
+          scores: {
+            player: Math.max(0, Math.trunc(finiteNumber(overrides.match.scores?.player))),
+            ai: Math.max(0, Math.trunc(finiteNumber(overrides.match.scores?.ai))),
+          },
+          server: overrides.match.server ?? 'player',
+          expectedHitter: overrides.match.expectedHitter ?? null,
+          lastHitter: overrides.match.lastHitter ?? null,
+          serveFaults: Math.max(0, Math.trunc(finiteNumber(overrides.match.serveFaults))),
+          rallyContacts: Math.max(0, Math.trunc(finiteNumber(overrides.match.rallyContacts))),
+          wallReached: Boolean(overrides.match.wallReached),
+          bouncesAfterWall: Math.max(
+            0,
+            Math.trunc(finiteNumber(overrides.match.bouncesAfterWall)),
+          ),
+          serveInFlight: Boolean(overrides.match.serveInFlight),
+          pointWinner: overrides.match.pointWinner ?? null,
+          pointReason: overrides.match.pointReason ?? null,
+          matchWinner: overrides.match.matchWinner ?? null,
         }
       : null,
     hand: {

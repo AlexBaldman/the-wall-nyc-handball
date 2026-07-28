@@ -189,12 +189,23 @@ const snapshot = createSimulationSnapshot({
   seed: 42,
   player: { position: { x: 0, y: 0, z: COURT.serviceMarkers } },
   opponent: { position: { x: 0.5, y: 0, z: COURT.longLine } },
+  match: createMatchState({
+    active: true,
+    phase: 'rally',
+    targetScore: 11,
+    scores: { player: 4, ai: 3 },
+    server: 'player',
+    expectedHitter: 'ai',
+  }),
   hand: { position: { x: 0.3, y: 1, z: 7.4 } },
   opponentHand: { position: { x: 0.8, y: 1, z: 9.8 } },
   ball: handBall,
 });
 assert.equal(assertSimulationSnapshot(snapshot), true);
 assert.equal(snapshot.opponent.position.z, COURT.longLine);
+assert.equal(snapshot.match.targetScore, 11);
+assert.deepEqual(snapshot.match.scores, { player: 4, ai: 3 });
+assert.equal(snapshot.match.expectedHitter, 'ai');
 assert.doesNotThrow(() => JSON.stringify(snapshot), 'Snapshot must be serializable');
 
 const replayRecorder = createReplayRecorder({ seed: 42, label: 'test' });
@@ -265,6 +276,18 @@ const receiverWin = awardRally(createMatchState({ server: 'player' }), 'ai', 'se
 assert.deepEqual(receiverWin.match.scores, { player: 0, ai: 0 });
 assert.equal(receiverWin.point.sideOut, true);
 assert.equal(receiverWin.match.server, 'ai');
+const streetMatchWin = awardRally(
+  createMatchState({
+    targetScore: 11,
+    server: 'player',
+    scores: { player: 10, ai: 8 },
+  }),
+  'player',
+  'second-bounce',
+);
+assert.equal(streetMatchWin.match.scores.player, 11);
+assert.equal(streetMatchWin.match.matchWinner, 'player');
+assert.equal(streetMatchWin.point.matchWinner, 'player');
 
 console.log(
   `Physics checks passed: ${simulatedRebound.toFixed(2)}″ drop rebound, `
