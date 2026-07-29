@@ -8,6 +8,7 @@ import {
   sweepMovingSpheres,
 } from '../src/sim/ballistics.js';
 import { BALL, COURT, MATERIAL, PHYSICS, UNITS, courtRatios } from '../src/sim/court.js';
+import { deriveContactOutcome } from '../src/sim/contact-outcome.js';
 import { createSeededRandom } from '../src/sim/random.js';
 import { createReplayRecorder, validateReplay } from '../src/sim/replay.js';
 import {
@@ -177,6 +178,67 @@ assert.ok(handBall.velocity.z < 0, 'A forward swing should send the incoming bal
 assert.equal(handContact.technique, 'topspin');
 assert.ok(handContact.outgoingSpin.x < 0, 'Topspin contact should create forward rotation');
 
+const outcomeContact = (overrides = {}) => ({
+  position: { x: 0.45, y: 0.8, z: 4 },
+  outgoingVelocity: { x: 0, y: 0, z: -20 },
+  outgoingSpin: { x: 0, y: 0, z: 0 },
+  technique: 'palm',
+  charge: 0.65,
+  ...overrides,
+  metadata: {
+    handVelocity: { x: 0, y: 0, z: -8 },
+    modifiers: {},
+    ...overrides.metadata,
+  },
+});
+
+const pureOutcome = deriveContactOutcome(outcomeContact(), { x: 0, y: 0, z: 4 });
+assert.equal(pureOutcome.quality.id, 'pure');
+assert.equal(pureOutcome.shot.id, 'palm');
+assert.equal(pureOutcome.paceMph, 44.739);
+
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    position: { x: 0.45, y: 0.4, z: 4 },
+    charge: 0.8,
+    metadata: { modifiers: { drive: true } },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'kill-drive',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    position: { x: 0.45, y: 0.35, z: 4 },
+    technique: 'backspin',
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'roller-attempt',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'backspin',
+    metadata: { modifiers: { lift: true } },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'touch-lob',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    outgoingSpin: { x: 0, y: 70, z: 0 },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'hook',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'topspin',
+    charge: 0.8,
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'topspin-cut',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'fist',
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'knuckle-drive',
+);
+
 const firstRandom = createSeededRandom(42);
 const secondRandom = createSeededRandom(42);
 const firstSequence = Array.from({ length: 64 }, () => firstRandom.next());
@@ -189,13 +251,34 @@ const snapshot = createSimulationSnapshot({
   seed: 42,
   player: { position: { x: 0, y: 0, z: COURT.serviceMarkers } },
   opponent: { position: { x: 0.5, y: 0, z: COURT.longLine } },
+  match: createMatchState({
+    active: true,
+    phase: 'rally',
+    targetScore: 11,
+    scores: { player: 4, ai: 3 },
+    server: 'player',
+    expectedHitter: 'ai',
+  }),
   hand: { position: { x: 0.3, y: 1, z: 7.4 } },
   opponentHand: { position: { x: 0.8, y: 1, z: 9.8 } },
   ball: handBall,
 });
 assert.equal(assertSimulationSnapshot(snapshot), true);
 assert.equal(snapshot.opponent.position.z, COURT.longLine);
+assert.equal(snapshot.match.targetScore, 11);
+assert.deepEqual(snapshot.match.scores, { player: 4, ai: 3 });
+assert.equal(snapshot.match.expectedHitter, 'ai');
 assert.doesNotThrow(() => JSON.stringify(snapshot), 'Snapshot must be serializable');
+const normalizedMatchSnapshot = createSimulationSnapshot({
+  match: {
+    server: 7,
+    expectedHitter: false,
+    pointReason: 404,
+  },
+});
+assert.equal(normalizedMatchSnapshot.match.server, '7');
+assert.equal(normalizedMatchSnapshot.match.expectedHitter, 'false');
+assert.equal(normalizedMatchSnapshot.match.pointReason, '404');
 
 const replayRecorder = createReplayRecorder({ seed: 42, label: 'test' });
 replayRecorder.recordCommand(createPlayerCommand({
@@ -265,6 +348,18 @@ const receiverWin = awardRally(createMatchState({ server: 'player' }), 'ai', 'se
 assert.deepEqual(receiverWin.match.scores, { player: 0, ai: 0 });
 assert.equal(receiverWin.point.sideOut, true);
 assert.equal(receiverWin.match.server, 'ai');
+const streetMatchWin = awardRally(
+  createMatchState({
+    targetScore: 11,
+    server: 'player',
+    scores: { player: 10, ai: 8 },
+  }),
+  'player',
+  'second-bounce',
+);
+assert.equal(streetMatchWin.match.scores.player, 11);
+assert.equal(streetMatchWin.match.matchWinner, 'player');
+assert.equal(streetMatchWin.point.matchWinner, 'player');
 
 console.log(
   `Physics checks passed: ${simulatedRebound.toFixed(2)}″ drop rebound, `

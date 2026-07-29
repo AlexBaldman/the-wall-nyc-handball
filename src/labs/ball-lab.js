@@ -12,6 +12,7 @@ import {
 import { BALL, COURT, MATERIAL, PHYSICS, UNITS } from '../sim/court.js';
 import { createSeededRandom } from '../sim/random.js';
 import { createReplayRecorder } from '../sim/replay.js';
+import { deriveContactOutcome } from '../sim/contact-outcome.js';
 import {
   awardRally,
   beginPoint,
@@ -29,6 +30,12 @@ import {
   createSimulationSnapshot,
 } from '../sim/types.js';
 import { applyDeadzone, findGamepad, playGamepadRumble } from '../platform/gamepad.js';
+import {
+  chooseGhostTechnique,
+  createGhostObservation,
+  ghostAim,
+  getGhostProfile,
+} from '../game/wall-ghost.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -36,9 +43,14 @@ const ui = Object.fromEntries(
   [
     'controllerBadge',
     'controllerName',
+    'courtEntry',
+    'entryOpponentName',
+    'enterCourtButton',
+    'practiceFirstButton',
     'matchRibbon',
     'playerMatchScore',
     'aiMatchScore',
+    'matchOpponentName',
     'turnIndicator',
     'serveOwner',
     'rallyMetric',
@@ -50,6 +62,9 @@ const ui = Object.fromEntries(
     'intentLabel',
     'intentDetail',
     'worldHint',
+    'worldHintDetail',
+    'setPositionReadout',
+    'impactFlash',
     'chargeReadout',
     'chargeLabel',
     'chargeFill',
@@ -65,6 +80,20 @@ const ui = Object.fromEntries(
     'resetLabButton',
     'replayButton',
     'replayCount',
+    'opponentName',
+    'opponentTitle',
+    'opponentDescription',
+    'opponentReadDelay',
+    'opponentSpeed',
+    'matchResult',
+    'matchResultTag',
+    'matchResultTitle',
+    'matchResultScore',
+    'resultLongestRally',
+    'resultCleanContacts',
+    'resultBestPace',
+    'rematchButton',
+    'closeResultButton',
     'floorRestitution',
     'floorRestitutionValue',
     'wallRestitution',
@@ -95,6 +124,7 @@ const SIMULATION_HZ = 120;
 const SIMULATION_DT = 1 / SIMULATION_HZ;
 const BALL_SUBSTEPS = PHYSICS.solverHz / SIMULATION_HZ;
 const BALL_DT = 1 / PHYSICS.solverHz;
+const STREET_TARGET_SCORE = 11;
 const SEED = 0x57414c4c;
 const rng = createSeededRandom(SEED);
 let recorder = createReplayRecorder({ seed: SEED });
@@ -169,6 +199,7 @@ const CAMERA_PRESETS = [
 const input = {
   keys: new Set(),
   move: { x: 0, z: 0 },
+  touchMove: { x: 0, z: 0 },
   aim: { x: 0, y: -0.7 },
   pointerAim: false,
   activeTechnique: null,
@@ -177,6 +208,7 @@ const input = {
     english: 0,
     lift: false,
     drive: false,
+    setPosition: false,
   },
   gamepadIndex: null,
   gamepadButtons: [],
@@ -217,7 +249,6 @@ const state = {
     targetPosition: { x: 0.62, z: COURT.longLine - 0.45 },
     observation: null,
     observationQueue: [],
-    observationDelayTicks: 12,
     commandSequence: 0,
     lastCommandDigest: '',
   },
@@ -245,9 +276,19 @@ const state = {
   contacts: 0,
   feeds: 0,
   mode: 'practice',
-  match: createMatchState(),
+  match: createMatchState({ targetScore: STREET_TARGET_SCORE }),
+  difficulty: 'regular',
+  onboardingStage: 0,
+  matchStats: {
+    totalContacts: 0,
+    cleanContacts: 0,
+    longestRally: 0,
+    bestPaceMph: 0,
+    pointsWon: 0,
+    pointsLost: 0,
+  },
   dropTracking: null,
-  cameraIndex: 1,
+  cameraIndex: 0,
   cameraFocalLength: 50,
   history: [],
   replayPlayback: null,
@@ -255,7 +296,135 @@ const state = {
   hintProgress: 0,
   pendingMissCheck: false,
   tempoScale: 0.78,
+  setPositionVisible: false,
 };
+
+function activeGhostProfile() {
+  return getGhostProfile(state.difficulty);
+}
+
+function createStreetMatchState(overrides = {}) {
+  return createMatchState({
+    targetScore: STREET_TARGET_SCORE,
+    ...overrides,
+  });
+}
+
+function resetMatchStats() {
+  state.matchStats = {
+    totalContacts: 0,
+    cleanContacts: 0,
+    longestRally: 0,
+    bestPaceMph: 0,
+    pointsWon: 0,
+    pointsLost: 0,
+  };
+}
+
+function opponentSpeedLabel(profile) {
+  if (profile.id === 'rookie') return 'Patient';
+  if (profile.id === 'champion') return 'Relentless';
+  return 'Balanced';
+}
+
+function syncOpponentUi() {
+  const profile = activeGhostProfile();
+  ui.opponentName.textContent = profile.name;
+  ui.opponentTitle.textContent = profile.title;
+  ui.opponentDescription.textContent = profile.description;
+  ui.opponentReadDelay.textContent = `${profile.observationDelayMs} ms`;
+  ui.opponentSpeed.textContent = opponentSpeedLabel(profile);
+  ui.entryOpponentName.textContent = profile.name;
+  ui.matchOpponentName.textContent = profile.name;
+  ui.aiReadLabel.textContent = `Waiting · ${profile.observationDelayMs} ms delay`;
+  document.querySelectorAll('[data-difficulty]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.difficulty === profile.id);
+  });
+  syncDifficultyAvailability();
+}
+
+function syncDifficultyAvailability() {
+  const disabled = state.mode === 'match' && state.match.active;
+  document.querySelectorAll('[data-difficulty]').forEach((button) => {
+    button.disabled = disabled;
+  });
+}
+
+function setDifficulty(id) {
+  if (state.mode === 'match' && state.match.active) return false;
+  const profile = getGhostProfile(id);
+  state.difficulty = profile.id;
+  state.ai.observation = null;
+  state.ai.observationQueue.length = 0;
+  syncOpponentUi();
+  return true;
+}
+
+function dismissCourtEntry() {
+  ui.courtEntry.classList.add('is-hidden');
+  document.body.classList.add('is-playing');
+  window.setTimeout(() => canvas.focus(), 280);
+}
+
+function setOnboardingStage(stage) {
+  state.onboardingStage = Math.max(state.onboardingStage, stage);
+  const step = ui.worldHint.querySelector('span');
+  const instruction = ui.worldHint.querySelector('strong');
+  const key = instruction.querySelector('kbd');
+
+  if (state.onboardingStage === 0) {
+    step.textContent = '01';
+    instruction.firstChild.textContent = 'Move into the ball with ';
+    key.textContent = input.gamepadIndex === null ? 'WASD' : 'LS';
+    ui.worldHintDetail.textContent = 'Meet the bounce at a comfortable arm’s length.';
+    return;
+  }
+
+  if (state.onboardingStage === 1) {
+    step.textContent = '02';
+    instruction.firstChild.textContent = 'Point at the wall · hold ';
+    key.textContent = input.gamepadIndex === null ? 'Space' : 'A';
+    ui.worldHintDetail.textContent = 'A short hold controls; a longer hold loads pace through the feet.';
+    return;
+  }
+
+  if (state.onboardingStage === 2) {
+    step.textContent = '03';
+    instruction.firstChild.textContent = 'Release through the ball ';
+    key.textContent = 'NOW';
+    ui.worldHintDetail.textContent = 'The hand must physically meet the ball. Spacing and timing decide the result.';
+    return;
+  }
+
+  ui.worldHint.classList.add('is-hidden');
+}
+
+function registerPlayerMovementIntent() {
+  if (state.onboardingStage === 0) setOnboardingStage(1);
+}
+
+function closeMatchResult() {
+  ui.matchResult.hidden = true;
+  document.body.classList.remove('has-match-result');
+  canvas.focus();
+}
+
+function showMatchResult(winner) {
+  const won = winner === 'player';
+  const stats = state.matchStats;
+  const cleanRate = stats.totalContacts
+    ? Math.round(stats.cleanContacts / stats.totalContacts * 100)
+    : 0;
+  ui.matchResultTag.textContent = won ? 'Court yours' : 'Run it back';
+  ui.matchResultTitle.textContent = won ? 'You took the wall.' : `${activeGhostProfile().name} held court.`;
+  ui.matchResultScore.textContent = `${state.match.scores.player}–${state.match.scores.ai}`;
+  ui.resultLongestRally.textContent = String(stats.longestRally);
+  ui.resultCleanContacts.textContent = `${cleanRate}%`;
+  ui.resultBestPace.textContent = `${stats.bestPaceMph.toFixed(1)} mph`;
+  ui.matchResult.hidden = false;
+  document.body.classList.add('has-match-result');
+  window.requestAnimationFrame(() => ui.rematchButton.focus());
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07131d);
@@ -288,6 +457,11 @@ const ballObjects = createBallVisual();
 const playerObjects = createPlayerVisual();
 const opponentObjects = createOpponentVisual();
 const trailGeometry = new THREE.BufferGeometry();
+trailGeometry.setAttribute(
+  'position',
+  new THREE.BufferAttribute(new Float32Array(54 * 3), 3),
+);
+trailGeometry.setDrawRange(0, 0);
 const trailLine = new THREE.Line(
   trailGeometry,
   new THREE.LineBasicMaterial({
@@ -691,7 +865,10 @@ function createPlayerVisual() {
   hand.castShadow = true;
   scene.add(hand);
 
-  const intentGeometry = new THREE.BufferGeometry();
+  const intentGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+  ]);
   const intentLine = new THREE.Line(
     intentGeometry,
     new THREE.LineDashedMaterial({
@@ -879,7 +1056,7 @@ function beginTechnique(technique) {
     && state.match.active
     && state.match.expectedHitter !== 'player'
   ) {
-    ui.resultLabel.textContent = 'Ghost owns this touch';
+    ui.resultLabel.textContent = `${activeGhostProfile().name} owns this touch`;
     ui.contactReason.textContent = 'Recover your position and read the return. Your hand becomes live when the turn changes.';
     return;
   }
@@ -895,6 +1072,7 @@ function beginTechnique(technique) {
   input.activeTechnique = technique;
   input.prepareStartedAt = state.simulationTime;
   state.pendingMissCheck = false;
+  if (state.onboardingStage <= 1) setOnboardingStage(2);
   syncTechniqueUi();
 }
 
@@ -1044,6 +1222,7 @@ function startAiSwing() {
   const charge = currentAiCharge();
   const preparedStart = { ...state.aiHand.position };
   const observation = state.ai.observation;
+  const profile = activeGhostProfile();
   const handSpeed = (7.2 + charge * 6.8) * technique.pace;
   const travelDistance = 1.28;
   const preliminaryDuration = Math.max(0.11, travelDistance / handSpeed);
@@ -1055,11 +1234,11 @@ function startAiSwing() {
   const perceivedBall = projectedBall?.position ?? preparedStart;
   const serving = state.match.phase === 'serve-toss' && state.match.server === 'ai';
   const target = {
-    x: THREE.MathUtils.clamp(
-      -state.player.position.x * 0.48 + rng.signed(0.32),
-      -COURT.halfWidth + 0.35,
-      COURT.halfWidth - 0.35,
-    ),
+    x: ghostAim(profile, {
+      playerX: state.player.position.x,
+      halfWidth: COURT.halfWidth - 0.35,
+      signedRandom: (amount) => rng.signed(amount),
+    }),
     y: serving
       ? 1.55 + rng.signed(0.05)
       : perceivedBall.y < 0.7
@@ -1081,7 +1260,7 @@ function startAiSwing() {
     subtract(target, canAssist ? perceivedBall : preparedStart),
     { x: 0, y: 0, z: -1 },
   );
-  const english = rng.signed(0.32);
+  const english = rng.signed(profile.english);
   const modifiers = {
     english,
     lift: serving || perceivedBall.y < 0.48,
@@ -1163,7 +1342,9 @@ function startServeToss(server) {
   state.lastWallContact = null;
   state.wallContactsAtLastHand = 0;
   state.trail.length = 0;
-  ui.resultLabel.textContent = server === 'player' ? 'Serve toss is live' : 'Wall Ghost serves';
+  ui.resultLabel.textContent = server === 'player'
+    ? 'Serve toss is live'
+    : `${activeGhostProfile().name} serves`;
   if (server === 'ai') {
     state.ai.observation = {
       active: true,
@@ -1179,12 +1360,12 @@ function startServeToss(server) {
 function resetActorsForMatch() {
   const playerServing = state.match.server === 'player';
   state.player.position = {
-    x: playerServing ? -0.42 : -0.62,
+    x: playerServing ? -0.82 : -0.92,
     y: 0,
     z: playerServing ? COURT.serviceMarkers : COURT.longLine - 0.55,
   };
   state.ai.position = {
-    x: playerServing ? 0.62 : 0.42,
+    x: playerServing ? 0.92 : 0.82,
     y: 0,
     z: playerServing ? COURT.longLine - 0.55 : COURT.serviceMarkers,
   };
@@ -1202,9 +1383,12 @@ function resetActorsForMatch() {
 
 function startRallyPoint() {
   unlockAudio();
+  dismissCourtEntry();
+  closeMatchResult();
   if (state.mode === 'match' && state.match.active) return;
   if (state.match.matchWinner) {
-    state.match = createMatchState();
+    state.match = createStreetMatchState();
+    resetMatchStats();
   }
   state.mode = 'match';
   state.match = beginPoint(state.match);
@@ -1227,29 +1411,48 @@ function startRallyPoint() {
   ui.contactGrade.textContent = 'Point ready';
   ui.contactReason.textContent = state.match.server === 'player'
     ? 'Hold any contact button to toss and serve through the same physical hand collider.'
-    : 'Wall Ghost receives delayed ball observations and must make a real serve contact.';
+    : `${activeGhostProfile().name} receives delayed ball observations and must make a real serve contact.`;
   ui.resultLabel.textContent = state.match.server === 'player'
     ? state.match.serveFaults === 1 ? 'Second serve · hold a contact' : 'Your serve · hold a contact'
-    : 'Wall Ghost steps in to serve';
+    : `${activeGhostProfile().name} steps in to serve`;
   if (state.match.server === 'ai') {
     startServeToss('ai');
   }
   syncMatchUi();
 }
 
-function updatePlayer() {
+function playerMovementIntent() {
   const keyMoveX = (input.keys.has('KeyD') ? 1 : 0) - (input.keys.has('KeyA') ? 1 : 0);
   const keyMoveZ = (input.keys.has('KeyS') ? 1 : 0) - (input.keys.has('KeyW') ? 1 : 0);
-  const moveX = Math.abs(input.move.x) > 0.08 ? input.move.x : keyMoveX;
-  const moveZ = Math.abs(input.move.z) > 0.08 ? input.move.z : keyMoveZ;
-  const moveLength = Math.hypot(moveX, moveZ);
-  const normalizedX = moveLength > 1 ? moveX / moveLength : moveX;
-  const normalizedZ = moveLength > 1 ? moveZ / moveLength : moveZ;
+  const setOffBall = (
+    input.modifiers.setPosition
+    && state.mode === 'match'
+    && state.match.active
+    && state.match.expectedHitter !== 'player'
+  );
+  const deviceMoveX = Math.abs(input.move.x) > 0.08 ? input.move.x : input.touchMove.x;
+  const deviceMoveZ = Math.abs(input.move.z) > 0.08 ? input.move.z : input.touchMove.z;
+  const moveX = setOffBall ? 0 : Math.abs(deviceMoveX) > 0.08 ? deviceMoveX : keyMoveX;
+  const moveZ = setOffBall ? 0 : Math.abs(deviceMoveZ) > 0.08 ? deviceMoveZ : keyMoveZ;
+  const length = Math.hypot(moveX, moveZ);
+  return {
+    x: length > 1 ? moveX / length : moveX,
+    z: length > 1 ? moveZ / length : moveZ,
+    setOffBall,
+  };
+}
+
+function updatePlayer() {
+  const movement = playerMovementIntent();
+  const moveLength = Math.hypot(movement.x, movement.z);
+  const normalizedX = movement.x;
+  const normalizedZ = movement.z;
   const preparing = Boolean(input.activeTechnique);
-  const maximumSpeed = preparing ? 2.25 : 3.95;
+  if (moveLength > 0.12) registerPlayerMovementIntent();
+  const maximumSpeed = movement.setOffBall ? 0 : preparing ? 2.25 : 3.95;
   const targetVelocityX = normalizedX * maximumSpeed;
   const targetVelocityZ = normalizedZ * maximumSpeed;
-  const acceleration = preparing ? 15 : 22;
+  const acceleration = movement.setOffBall ? 34 : preparing ? 15 : 22;
   const response = 1 - Math.exp(-acceleration * SIMULATION_DT);
 
   state.player.velocity.x += (targetVelocityX - state.player.velocity.x) * response;
@@ -1267,38 +1470,31 @@ function updatePlayer() {
     COURT.longLine + COURT.runback - 0.6,
   );
   state.player.preparation = currentCharge();
+  if (movement.setOffBall !== state.setPositionVisible) {
+    state.setPositionVisible = movement.setOffBall;
+    ui.setPositionReadout.classList.toggle('is-active', movement.setOffBall);
+    ui.setPositionReadout.setAttribute('aria-hidden', String(!movement.setOffBall));
+  }
 }
 
 function updateAiPerception() {
+  const profile = activeGhostProfile();
   const perceptionLive = state.mode === 'match' && state.match.active;
   if (!perceptionLive) {
     state.ai.observation = null;
     state.ai.observationQueue.length = 0;
-    ui.aiReadLabel.textContent = 'Waiting · 96 ms delay';
+    ui.aiReadLabel.textContent = `Waiting · ${profile.observationDelayMs} ms delay`;
     return;
   }
 
-  if (state.tick % 6 === 0 && state.ball.active) {
-    state.ai.observationQueue.push({
-      active: true,
-      position: {
-        x: state.ball.position.x + rng.signed(0.025),
-        y: Math.max(BALL.radius, state.ball.position.y + rng.signed(0.018)),
-        z: state.ball.position.z + rng.signed(0.03),
-      },
-      velocity: {
-        x: state.ball.velocity.x + rng.signed(0.06),
-        y: state.ball.velocity.y + rng.signed(0.08),
-        z: state.ball.velocity.z + rng.signed(0.08),
-      },
-      angularVelocity: {
-        x: state.ball.angularVelocity.x + rng.signed(1.5),
-        y: state.ball.angularVelocity.y + rng.signed(1.5),
-        z: state.ball.angularVelocity.z + rng.signed(1.5),
-      },
-      sourceTick: state.tick,
-      deliveredTick: state.tick + state.ai.observationDelayTicks,
-    });
+  if (state.tick % profile.observationIntervalTicks === 0 && state.ball.active) {
+    state.ai.observationQueue.push(createGhostObservation({
+      profile,
+      ball: state.ball,
+      tick: state.tick,
+      simulationHz: SIMULATION_HZ,
+      signedRandom: (amount) => rng.signed(amount),
+    }));
   }
 
   while (
@@ -1312,12 +1508,13 @@ function updateAiPerception() {
     const age = state.tick - state.ai.observation.sourceTick;
     ui.aiReadLabel.textContent = `${Math.round(age / SIMULATION_HZ * 1000)} ms old · noisy read`;
   } else {
-    ui.aiReadLabel.textContent = 'Waiting · 96 ms delay';
+    ui.aiReadLabel.textContent = `Waiting · ${profile.observationDelayMs} ms delay`;
   }
 }
 
 function updateAiActor() {
   updateAiPerception();
+  const profile = activeGhostProfile();
   const matchLive = state.mode === 'match' && state.match.active;
   const ownsTouch = matchLive && state.match.expectedHitter === 'ai';
   const observation = state.ai.observation;
@@ -1340,7 +1537,7 @@ function updateAiActor() {
         startAiPreparation('palm', state.tick + 30);
       }
     } else if (perceivedNow.velocity.z > 0.2) {
-      const interceptZ = 8.35;
+      const interceptZ = profile.recoveryDepth;
       const eta = Math.max(
         0,
         (interceptZ - perceivedNow.position.z) / Math.max(0.2, perceivedNow.velocity.z),
@@ -1359,15 +1556,15 @@ function updateAiActor() {
         ),
       };
 
-      if (eta <= 0.72 && !state.ai.preparing && !state.aiSwing) {
-        const technique = perceivedNow.position.y < 0.55
-          ? 'backspin'
-          : state.match.rallyContacts >= 4 && rng.next() > 0.64
-            ? 'topspin'
-            : 'palm';
+      if (eta <= profile.prepareEta && !state.ai.preparing && !state.aiSwing) {
+        const technique = chooseGhostTechnique(profile, {
+          perceivedHeight: perceivedNow.position.y,
+          rallyContacts: state.match.rallyContacts,
+          random: rng.next(),
+        });
         startAiPreparation(technique);
       }
-      if (eta <= 0.075 && state.ai.preparing && !state.aiSwing) {
+      if (eta <= profile.releaseEta && state.ai.preparing && !state.aiSwing) {
         startAiSwing();
       }
     } else {
@@ -1377,7 +1574,7 @@ function updateAiActor() {
           -COURT.halfWidth + 0.55,
           COURT.halfWidth - 0.55,
         ),
-        z: 8.25,
+        z: profile.recoveryDepth,
       };
     }
   } else if (matchLive) {
@@ -1389,7 +1586,7 @@ function updateAiActor() {
       ),
       z: state.match.server === 'ai' && state.match.phase === 'serve-ready'
         ? COURT.serviceMarkers
-        : 8.5,
+        : profile.recoveryDepth + 0.25,
     };
   } else {
     state.ai.targetPosition = {
@@ -1410,10 +1607,12 @@ function updateAiActor() {
   const dx = state.ai.targetPosition.x - state.ai.position.x;
   const dz = state.ai.targetPosition.z - state.ai.position.z;
   const distance = Math.hypot(dx, dz);
-  const maximumSpeed = state.ai.preparing ? 2.35 : 3.65;
+  const maximumSpeed = state.ai.preparing ? profile.preparedMoveSpeed : profile.moveSpeed;
   const targetVx = distance > 0.035 ? dx / distance * maximumSpeed : 0;
   const targetVz = distance > 0.035 ? dz / distance * maximumSpeed : 0;
-  const response = 1 - Math.exp(-(state.ai.preparing ? 14 : 20) * SIMULATION_DT);
+  const response = 1 - Math.exp(-(
+    state.ai.preparing ? profile.preparedAcceleration : profile.acceleration
+  ) * SIMULATION_DT);
   state.ai.velocity.x += (targetVx - state.ai.velocity.x) * response;
   state.ai.velocity.z += (targetVz - state.ai.velocity.z) * response;
   state.ai.position.x += state.ai.velocity.x * SIMULATION_DT;
@@ -1501,11 +1700,12 @@ function updateAiHand() {
 }
 
 function commandForTick() {
+  const movement = playerMovementIntent();
   return createPlayerCommand({
     controllerId: 'player',
     tick: state.tick,
     sequence: input.commandSequence,
-    move: { x: input.move.x, z: input.move.z },
+    move: { x: movement.x, z: movement.z },
     aim: input.aim,
     contact: input.activeTechnique ?? state.swing?.technique ?? null,
     phase: input.activeTechnique ? 'prepare' : state.swing ? 'swing' : 'none',
@@ -1736,12 +1936,16 @@ const POINT_REASON_LABELS = {
   unreachable: 'Out of reach',
 };
 
+function actorLabel(actor) {
+  return actor === 'player' ? 'You' : activeGhostProfile().name;
+}
+
 function finishPointPresentation(point) {
-  const winnerName = point.winner === 'player' ? 'You' : 'Wall Ghost';
+  const winnerName = actorLabel(point.winner);
   const winnerVerb = point.winner === 'player' ? 'own' : 'owns';
   const reasonLabel = POINT_REASON_LABELS[point.reason] ?? point.reason;
   ui.resultLabel.textContent = point.matchWinner
-    ? `${winnerName} ${winnerVerb} the lab`
+    ? `${winnerName} ${winnerVerb} the wall`
     : point.scored
       ? `${winnerName} score · ${reasonLabel}`
       : `Side out · ${winnerName} serve`;
@@ -1755,13 +1959,28 @@ function finishPointPresentation(point) {
   ui.rallyButtonLabel.textContent = point.matchWinner ? 'Run it back' : 'Next point';
   ui.rallyButtonHint.textContent = point.matchWinner
     ? `Final · ${state.match.scores.player}–${state.match.scores.ai}`
-    : `${state.match.server === 'player' ? 'Your' : 'Ghost'} serve`;
+    : `${state.match.server === 'player' ? 'Your' : activeGhostProfile().name} serve`;
   syncMatchUi();
+  if (point.matchWinner) {
+    window.setTimeout(() => {
+      if (state.match.matchWinner === point.matchWinner) {
+        showMatchResult(point.matchWinner);
+      }
+    }, 520);
+  }
 }
 
 function resolveMatchPoint(winner, reason) {
   if (state.mode !== 'match' || !state.match.active || !winner) return;
+  state.matchStats.longestRally = Math.max(
+    state.matchStats.longestRally,
+    state.match.rallyContacts,
+  );
   const result = awardRally(state.match, winner, reason);
+  if (result.point.scored) {
+    if (winner === 'player') state.matchStats.pointsWon += 1;
+    else state.matchStats.pointsLost += 1;
+  }
   state.match = result.match;
   state.ball.active = false;
   state.swing = null;
@@ -1796,7 +2015,9 @@ function handleMatchServeFault(reason) {
   ui.contactGrade.textContent = 'First service fault';
   ui.contactReason.textContent = 'The server keeps one final attempt. The same physical serve rules apply.';
   ui.rallyButtonLabel.textContent = 'Second serve';
-  ui.rallyButtonHint.textContent = state.match.server === 'player' ? 'Your ball' : 'Ghost ball';
+  ui.rallyButtonHint.textContent = state.match.server === 'player'
+    ? 'Your ball'
+    : `${activeGhostProfile().name} ball`;
   showCallout('Fault!');
   syncMatchUi();
 }
@@ -1832,6 +2053,7 @@ function handleBallEvents(events) {
         ? 'Crack seam — dead rebound'
         : `Live wall at ${wallFeet.toFixed(1)} feet`;
       showCallout(event.contact.metadata.crack ? 'Crack!' : 'Wall!');
+      showImpactFlash(event.contact.position, event.contact.metadata.crack ? 1.25 : 0.55);
       playImpact(event.contact.metadata.crack ? 68 : 112, event.contact.metadata.crack ? 0.16 : 0.09);
       rumble(event.contact.metadata.crack ? 0.8 : 0.45, 90);
     } else if (event.contact.kind === 'floor') {
@@ -1893,48 +2115,46 @@ function handleHandContact(contact, hitter = 'player') {
   } else {
     state.aiSwing.madeContact = true;
   }
-  recorder.recordContact(contact);
-
   if (state.mode === 'match') {
     state.match = registerLegalContact(state.match, hitter, state.ball);
   }
 
-  const speedMph = magnitude(contact.outgoingVelocity) * 2.236936;
-  const spinRpm = magnitude(contact.outgoingSpin) * 60 / (Math.PI * 2);
-  const handSpeed = magnitude(contact.metadata.handVelocity);
   const actor = hitter === 'player' ? state.player : state.ai;
-  const lateralSpacing = Math.abs(contact.position.x - actor.position.x);
-  const spacingGrade = lateralSpacing < 0.28
-    ? 'Jammed'
-    : lateralSpacing > 0.64
-      ? 'Reached'
-      : 'Clean';
-  const prepGrade = contact.charge >= 0.92
-    ? 'Loaded'
-    : contact.charge >= 0.55
-      ? 'Set'
-      : 'Quick';
-  const pure = spacingGrade === 'Clean' && contact.charge >= 0.55;
+  const outcome = deriveContactOutcome(contact, actor.position);
+  contact.metadata.outcome = outcome;
+  recorder.recordContact(contact);
 
-  ui.speedMetric.textContent = speedMph.toFixed(1);
-  ui.spinMetric.textContent = Math.round(spinRpm);
-  ui.contactGrade.textContent = pure ? 'Pure contact' : `${spacingGrade} contact`;
-  ui.spacingMetric.textContent = spacingGrade;
-  ui.prepMetric.textContent = `${prepGrade} · ${Math.round(contact.charge * 100)}%`;
-  ui.handMetric.textContent = `${handSpeed.toFixed(1)} m/s`;
+  if (hitter === 'player') {
+    state.matchStats.totalContacts += 1;
+    if (outcome.quality.pure) state.matchStats.cleanContacts += 1;
+    state.matchStats.bestPaceMph = Math.max(
+      state.matchStats.bestPaceMph,
+      outcome.paceMph,
+    );
+  }
+
+  ui.speedMetric.textContent = outcome.paceMph.toFixed(1);
+  ui.spinMetric.textContent = outcome.spinRpm;
+  ui.contactGrade.textContent = outcome.quality.pure
+    ? 'Pure contact'
+    : `${outcome.spacing.label} contact`;
+  ui.spacingMetric.textContent = outcome.spacing.label;
+  ui.prepMetric.textContent = `${outcome.preparation.label} · ${Math.round(outcome.preparation.charge * 100)}%`;
+  ui.handMetric.textContent = `${outcome.handSpeedMps.toFixed(1)} m/s`;
   ui.bounceMetric.textContent = 'Waiting';
-  ui.contactReason.textContent = pure
-    ? `${hitter === 'player' ? 'Your' : 'Ghost’s'} ${TECHNIQUES[contact.technique].label.toLowerCase()} met the ball inside a balanced reach window. Physics now owns the result.`
-    : spacingGrade === 'Jammed'
+  ui.contactReason.textContent = outcome.quality.pure
+    ? `${hitter === 'player' ? 'Your' : `${activeGhostProfile().name}’s`} ${outcome.shot.label.toLowerCase()} met the ball inside a balanced reach window. Physics now owns the result.`
+    : outcome.spacing.id === 'jammed'
       ? 'The ball got too close to the body. Create space earlier for cleaner direction.'
       : 'The hand reached near its anatomical limit. Move your feet into the lane.';
-  ui.resultLabel.textContent = `${hitter === 'player' ? 'You' : 'Ghost'} · ${TECHNIQUES[contact.technique].label} · ${speedMph.toFixed(1)} mph`;
-  showCallout(pure ? hitter === 'player' ? 'Pure!' : 'Ghost!' : 'Contact!');
+  ui.resultLabel.textContent = `${actorLabel(hitter)} · ${outcome.shot.label} · ${outcome.paceMph.toFixed(1)} mph`;
+  showCallout(outcome.quality.pure ? hitter === 'player' ? 'Pure!' : 'Ghost!' : 'Contact!');
+  showImpactFlash(contact.position, outcome.quality.pure ? 1.35 : 0.8);
   playImpact(hitter === 'player' ? 185 : 154, 0.12);
   if (hitter === 'player') {
-    rumble(pure ? 0.68 : 0.42, 75);
+    rumble(outcome.quality.pure ? 0.68 : 0.42, 75);
     state.hintProgress += 1;
-    if (state.hintProgress >= 2) ui.worldHint.classList.add('is-hidden');
+    setOnboardingStage(3);
   }
   syncMatchUi();
 }
@@ -1987,6 +2207,7 @@ function updateDropTracking() {
 
 function feedBall() {
   unlockAudio();
+  dismissCourtEntry();
   state.mode = 'practice';
   state.match = {
     ...state.match,
@@ -2062,7 +2283,9 @@ function resetLab({ resetSeed = true } = {}) {
   lastFrameTime = performance.now();
   lastUiUpdate = 0;
   state.mode = 'practice';
-  state.match = createMatchState();
+  state.match = createStreetMatchState();
+  resetMatchStats();
+  closeMatchResult();
   state.ball = createBallState({
     active: false,
     position: { x: 0, y: BALL.radius, z: COURT.serviceMarkers },
@@ -2103,8 +2326,15 @@ function resetLab({ resetSeed = true } = {}) {
   state.replayPlayback = null;
   state.hintProgress = 0;
   state.pendingMissCheck = false;
+  state.setPositionVisible = false;
   input.activeTechnique = null;
   input.prepareStartedAt = 0;
+  input.modifiers = {
+    english: 0,
+    lift: false,
+    drive: false,
+    setPosition: false,
+  };
   input.gamepadButtons = [];
   input.commandSequence = 0;
   input.lastCommandDigest = '';
@@ -2118,9 +2348,12 @@ function resetLab({ resetSeed = true } = {}) {
   ui.prepMetric.textContent = '—';
   ui.handMetric.textContent = '—';
   ui.bounceMetric.textContent = '—';
-  ui.contactReason.textContent = 'Feed a ball. Move into its lane. Hold a contact button and release as it enters reach.';
+  ui.contactReason.textContent = 'Start a match or take one practice feed. The coach explains what the physics produced and why.';
+  ui.setPositionReadout.classList.remove('is-active');
+  ui.setPositionReadout.setAttribute('aria-hidden', 'true');
   syncTechniqueUi();
   syncMatchUi();
+  syncOpponentUi();
 }
 
 function currentSnapshot(events = []) {
@@ -2130,6 +2363,7 @@ function currentSnapshot(events = []) {
     seed: rng.getState(),
     player: state.player,
     opponent: state.ai,
+    match: state.match,
     hand: state.hand,
     opponentHand: state.aiHand,
     ball: state.ball,
@@ -2203,6 +2437,18 @@ function updateVisuals(snapshot = null) {
   );
   const movementLean = THREE.MathUtils.clamp((playerState.velocity?.x ?? 0) * -0.035, -0.12, 0.12);
   playerObjects.torso.rotation.z += (movementLean - playerObjects.torso.rotation.z) * 0.18;
+  const playerSwingProgress = state.swing
+    ? THREE.MathUtils.clamp(state.swing.elapsed / state.swing.duration, 0, 1)
+    : 0;
+  const playerTurn = state.swing
+    ? Math.sin(playerSwingProgress * Math.PI) * -0.42
+    : -(playerState.preparation ?? 0) * 0.16;
+  playerObjects.torso.rotation.y += (playerTurn - playerObjects.torso.rotation.y) * 0.28;
+  const playerSpeed = Math.hypot(
+    playerState.velocity?.x ?? 0,
+    playerState.velocity?.z ?? 0,
+  );
+  playerObjects.group.position.y = Math.sin(state.simulationTime * 12) * Math.min(0.035, playerSpeed * 0.008);
   playerObjects.hand.position.set(
     handState.position.x,
     handState.position.y,
@@ -2223,6 +2469,21 @@ function updateVisuals(snapshot = null) {
   opponentObjects.torso.rotation.z += (
     opponentLean - opponentObjects.torso.rotation.z
   ) * 0.18;
+  const opponentSwingProgress = state.aiSwing
+    ? THREE.MathUtils.clamp(state.aiSwing.elapsed / state.aiSwing.duration, 0, 1)
+    : 0;
+  const opponentTurn = state.aiSwing
+    ? Math.sin(opponentSwingProgress * Math.PI) * -0.42
+    : -(opponentState.preparation ?? 0) * 0.16;
+  opponentObjects.torso.rotation.y += (
+    opponentTurn - opponentObjects.torso.rotation.y
+  ) * 0.28;
+  const opponentSpeed = Math.hypot(
+    opponentState.velocity?.x ?? 0,
+    opponentState.velocity?.z ?? 0,
+  );
+  opponentObjects.group.position.y = Math.sin(state.simulationTime * 12 + 1.7)
+    * Math.min(0.035, opponentSpeed * 0.008);
   opponentObjects.hand.position.set(
     opponentHandState.position.x,
     opponentHandState.position.y,
@@ -2283,9 +2544,13 @@ function updateVisuals(snapshot = null) {
         pulse * THREE.MathUtils.clamp(1 + age / 90, 1, 1.45),
       );
     }
-    trailGeometry.setFromPoints(
-      state.trail.map((point) => new THREE.Vector3(point.x, point.y, point.z)),
-    );
+    const trailPositions = trailGeometry.getAttribute('position');
+    for (let index = 0; index < state.trail.length; index += 1) {
+      const point = state.trail[index];
+      trailPositions.setXYZ(index, point.x, point.y, point.z);
+    }
+    trailPositions.needsUpdate = true;
+    trailGeometry.setDrawRange(0, state.trail.length);
   }
 }
 
@@ -2347,6 +2612,7 @@ function syncTechniqueUi() {
   if (input.modifiers.english > 0) modifiers.push('right English');
   if (input.modifiers.lift) modifiers.push('lift');
   if (input.modifiers.drive) modifiers.push('drive');
+  if (input.modifiers.setPosition) modifiers.push('set stance');
   ui.intentLabel.textContent = `${technique.label} · ${technique.intent}`;
   ui.intentDetail.textContent = modifiers.length
     ? `${modifiers.join(' + ')} changes the hand impulse—not a canned shot path.`
@@ -2356,8 +2622,9 @@ function syncTechniqueUi() {
 function syncMatchUi() {
   const match = state.match;
   const inMatch = state.mode === 'match';
-  const serverName = match.server === 'player' ? 'You' : 'Ghost';
-  const receiverName = match.server === 'player' ? 'Ghost' : 'You';
+  const profile = activeGhostProfile();
+  const serverName = match.server === 'player' ? 'You' : profile.name;
+  const receiverName = match.server === 'player' ? profile.name : 'You';
 
   ui.playerMatchScore.textContent = String(match.scores.player);
   ui.aiMatchScore.textContent = String(match.scores.ai);
@@ -2365,19 +2632,20 @@ function syncMatchUi() {
   ui.rallyMetric.textContent = `${match.rallyContacts}-contact rally`;
   ui.matchRibbon.classList.toggle('is-match', inMatch);
   ui.rallyButton.disabled = inMatch && match.active;
+  syncDifficultyAvailability();
 
   if (!inMatch) {
-    ui.turnIndicator.textContent = state.mode === 'drop' ? 'Official ball test' : 'Sparring lab';
+    ui.turnIndicator.textContent = state.mode === 'drop' ? 'Official ball test' : 'Practice court';
     const hasMatchProgress = match.scores.player > 0 || match.scores.ai > 0 || match.serveFaults > 0;
-    ui.rallyButtonLabel.textContent = hasMatchProgress ? 'Resume Ghost match' : 'Spar with Ghost';
+    ui.rallyButtonLabel.textContent = hasMatchProgress ? 'Resume street match' : 'Play street match';
     ui.rallyButtonHint.textContent = hasMatchProgress
       ? `${serverName} serve · ${match.scores.player}–${match.scores.ai}`
-      : 'First to 5 · server scores';
+      : `First to ${match.targetScore} · side-out scoring`;
     return;
   }
 
   if (match.matchWinner) {
-    ui.turnIndicator.textContent = `${match.matchWinner === 'player' ? 'You win' : 'Ghost wins'} · match`;
+    ui.turnIndicator.textContent = `${match.matchWinner === 'player' ? 'You win' : `${profile.name} wins`} · match`;
     ui.rallyButtonLabel.textContent = 'Run it back';
     ui.rallyButtonHint.textContent = `Final · ${match.scores.player}–${match.scores.ai}`;
     return;
@@ -2385,7 +2653,7 @@ function syncMatchUi() {
 
   if (match.active) {
     if (match.phase === 'serve-ready') {
-      ui.turnIndicator.textContent = match.server === 'player' ? 'Hold to serve' : 'Ghost steps in';
+      ui.turnIndicator.textContent = match.server === 'player' ? 'Hold to serve' : `${profile.name} steps in`;
     } else if (match.phase === 'serve-toss') {
       ui.turnIndicator.textContent = `${serverName} toss · release`;
     } else if (match.serveInFlight) {
@@ -2393,7 +2661,7 @@ function syncMatchUi() {
     } else {
       ui.turnIndicator.textContent = match.expectedHitter === 'player'
         ? 'Your ball · move + release'
-        : 'Ghost reads the return';
+        : `${profile.name} reads the return`;
     }
     ui.rallyButtonLabel.textContent = 'Point live';
     ui.rallyButtonHint.textContent = `${receiverName} receiving`;
@@ -2408,7 +2676,7 @@ function syncMatchUi() {
   }
 
   ui.turnIndicator.textContent = match.pointWinner
-    ? `${match.pointWinner === 'player' ? 'You' : 'Ghost'} won the rally`
+    ? `${actorLabel(match.pointWinner)} won the rally`
     : 'Point complete';
   ui.rallyButtonLabel.textContent = 'Next point';
   ui.rallyButtonHint.textContent = `${serverName} serve`;
@@ -2474,6 +2742,9 @@ function pollGamepad() {
       : keyboardEnglish();
   input.modifiers.lift = (gamepad.buttons[6]?.value ?? 0) > 0.35 || input.keys.has('KeyQ');
   input.modifiers.drive = (gamepad.buttons[7]?.value ?? 0) > 0.35 || input.keys.has('KeyE');
+  input.modifiers.setPosition = Boolean(gamepad.buttons[11]?.pressed)
+    || input.keys.has('ShiftLeft')
+    || input.keys.has('ShiftRight');
   if (JSON.stringify(input.modifiers) !== previousModifiers) syncTechniqueUi();
 }
 
@@ -2486,6 +2757,7 @@ function updateKeyboardModifiers() {
   input.modifiers.english = keyboardEnglish();
   input.modifiers.lift = input.keys.has('KeyQ');
   input.modifiers.drive = input.keys.has('KeyE');
+  input.modifiers.setPosition = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
   syncTechniqueUi();
 }
 
@@ -2509,6 +2781,18 @@ function showCallout(message) {
   ui.callout.classList.add('is-active');
 }
 
+function showImpactFlash(position, intensity = 1) {
+  const projected = new THREE.Vector3(position.x, position.y, position.z).project(camera);
+  const x = THREE.MathUtils.clamp((projected.x * 0.5 + 0.5) * 100, 4, 96);
+  const y = THREE.MathUtils.clamp((-projected.y * 0.5 + 0.5) * 100, 4, 96);
+  ui.impactFlash.style.setProperty('--impact-x', `${x}%`);
+  ui.impactFlash.style.setProperty('--impact-y', `${y}%`);
+  ui.impactFlash.style.filter = `brightness(${0.75 + Math.min(1.5, intensity) * 0.5})`;
+  ui.impactFlash.classList.remove('is-active');
+  void ui.impactFlash.offsetWidth;
+  ui.impactFlash.classList.add('is-active');
+}
+
 function unlockAudio() {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2529,6 +2813,25 @@ function playImpact(frequency, gainValue) {
   oscillator.connect(gain).connect(audioContext.destination);
   oscillator.start(now);
   oscillator.stop(now + 0.13);
+
+  const noiseLength = Math.max(1, Math.floor(audioContext.sampleRate * 0.055));
+  const noiseBuffer = audioContext.createBuffer(1, noiseLength, audioContext.sampleRate);
+  const channel = noiseBuffer.getChannelData(0);
+  for (let index = 0; index < noiseLength; index += 1) {
+    const envelope = 1 - index / noiseLength;
+    channel[index] = (Math.random() * 2 - 1) * envelope;
+  }
+  const noise = audioContext.createBufferSource();
+  const filter = audioContext.createBiquadFilter();
+  const noiseGain = audioContext.createGain();
+  noise.buffer = noiseBuffer;
+  filter.type = frequency < 80 ? 'lowpass' : 'bandpass';
+  filter.frequency.setValueAtTime(Math.max(110, frequency * 7.5), now);
+  filter.Q.value = 0.7;
+  noiseGain.gain.setValueAtTime(gainValue * 0.42, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+  noise.connect(filter).connect(noiseGain).connect(audioContext.destination);
+  noise.start(now);
 }
 
 function rumble(intensity, milliseconds) {
@@ -2631,6 +2934,7 @@ window.addEventListener('blur', () => {
   if (input.activeTechnique) releaseTechnique(input.activeTechnique);
   input.keys.clear();
   input.move = { x: 0, z: 0 };
+  input.touchMove = { x: 0, z: 0 };
   updateKeyboardModifiers();
 });
 
@@ -2655,6 +2959,27 @@ document.querySelectorAll('.technique-button').forEach((button) => {
   button.addEventListener('pointercancel', () => releaseTechnique(technique));
 });
 
+document.querySelectorAll('[data-touch-x][data-touch-z]').forEach((button) => {
+  const beginMove = (event) => {
+    event.preventDefault();
+    button.setPointerCapture?.(event.pointerId);
+    input.touchMove = {
+      x: Number(button.dataset.touchX),
+      z: Number(button.dataset.touchZ),
+    };
+    registerPlayerMovementIntent();
+  };
+  const endMove = (event) => {
+    event.preventDefault();
+    input.touchMove = { x: 0, z: 0 };
+  };
+  button.addEventListener('pointerdown', beginMove);
+  button.addEventListener('pointerup', endMove);
+  button.addEventListener('pointercancel', endMove);
+  button.addEventListener('pointerleave', endMove);
+  button.addEventListener('lostpointercapture', endMove);
+});
+
 document.querySelectorAll('[data-camera]').forEach((button) => {
   button.addEventListener('click', () => setCamera(button.dataset.camera));
 });
@@ -2669,6 +2994,18 @@ ui.tempoScale.addEventListener('input', () => {
 });
 ui.feedButton.addEventListener('click', feedBall);
 ui.rallyButton.addEventListener('click', startRallyPoint);
+ui.enterCourtButton.addEventListener('click', startRallyPoint);
+ui.practiceFirstButton.addEventListener('click', feedBall);
+ui.rematchButton.addEventListener('click', () => {
+  state.match = createStreetMatchState();
+  resetMatchStats();
+  closeMatchResult();
+  startRallyPoint();
+});
+ui.closeResultButton.addEventListener('click', closeMatchResult);
+document.querySelectorAll('[data-difficulty]').forEach((button) => {
+  button.addEventListener('click', () => setDifficulty(button.dataset.difficulty));
+});
 ui.dropButton.addEventListener('click', runDropTest);
 ui.resetLabButton.addEventListener('click', () => resetLab());
 ui.replayButton.addEventListener('click', replayLastContact);
@@ -2705,7 +3042,7 @@ window.addEventListener('gamepadconnected', (event) => {
   ui.controllerBadge.classList.add('is-connected');
   const playStation = /playstation|dualsense|dualshock/i.test(event.gamepad.id);
   ui.controllerName.textContent = playStation ? 'PlayStation controller' : 'Gamepad connected';
-  ui.worldHint.querySelector('kbd').textContent = playStation ? '×' : 'A';
+  setOnboardingStage(state.onboardingStage);
 });
 
 window.addEventListener('gamepaddisconnected', (event) => {
@@ -2714,7 +3051,7 @@ window.addEventListener('gamepaddisconnected', (event) => {
   input.gamepadButtons = [];
   ui.controllerBadge.classList.remove('is-connected');
   ui.controllerName.textContent = 'Keys + mouse';
-  ui.worldHint.querySelector('kbd').textContent = 'A';
+  setOnboardingStage(state.onboardingStage);
 });
 
 const resizeObserver = new ResizeObserver(resize);
@@ -2723,17 +3060,22 @@ resize();
 syncPhysicsUi();
 syncTechniqueUi();
 syncMatchUi();
+syncOpponentUi();
+setOnboardingStage(0);
 ui.seedValue.textContent = `0x${SEED.toString(16).toUpperCase()}`;
 window.__THE_WALL_LAB__ = {
   getSnapshot: () => cloneSerializable(currentSnapshot()),
   getReplay: () => recorder.export(),
   getMatch: () => cloneSerializable(state.match),
+  getMatchStats: () => cloneSerializable(state.matchStats),
+  getDifficulty: () => state.difficulty,
   getAiObservation: () => cloneSerializable(state.ai.observation),
+  setDifficulty,
   feedBall,
   startRallyPoint,
   startGhostPoint: () => {
     if (state.match.active) return;
-    state.match = createMatchState({
+    state.match = createStreetMatchState({
       server: 'ai',
       scores: state.match.scores,
     });

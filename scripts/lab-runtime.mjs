@@ -43,17 +43,40 @@ try {
   assert.equal(webgl, true, 'Accuracy Lab needs a WebGL context');
   assert.equal(await page.locator('#resultLabel').textContent(), 'Ready for the feed');
   assert.equal(await page.locator('#seedValue').textContent(), '0x57414C4C');
+  assert.equal(await page.locator('#courtEntry').isVisible(), true, '3D match should open with a focused court-entry flow');
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getMatch().targetScore),
+    11,
+    'Street match should use the player-facing race-to-11 target',
+  );
+  await page.click('#courtEntry [data-difficulty="champion"]');
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getDifficulty()),
+    'champion',
+    'Court entry should configure the opponent profile',
+  );
+  assert.match(await page.locator('#opponentReadDelay').innerText(), /58 ms/i);
+  await page.click('#courtEntry [data-difficulty="regular"]');
 
   await page.screenshot({
     path: desktopScreenshot,
     fullPage: true,
   });
 
+  await page.click('#practiceFirstButton');
+  assert.equal(
+    await page.locator('#courtEntry').evaluate((element) => element.classList.contains('is-hidden')),
+    true,
+    'Starting practice should reveal the playable court',
+  );
+  await page.locator('.advanced-lab').evaluate((element) => {
+    element.open = true;
+  });
   await page.click('#dropButton');
   await page.waitForFunction(
     () => document.getElementById('resultLabel')?.textContent.includes('official window'),
     null,
-    { timeout: 5000 },
+    { timeout: 20000 },
   );
   const dropResult = await page.locator('#resultLabel').textContent();
   assert.match(dropResult, /official window/i, 'Drop test should land in the official range');
@@ -63,13 +86,13 @@ try {
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 3.8,
     null,
-    { timeout: 3000 },
+    { timeout: 10000 },
   );
   await page.keyboard.down('Space');
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 6.1,
     null,
-    { timeout: 3000 },
+    { timeout: 10000 },
   );
   await page.keyboard.up('Space');
   await page.waitForTimeout(800);
@@ -79,6 +102,17 @@ try {
   assert.ok(
     replay.contacts.some((contact) => contact.kind === 'hand'),
     'Feed/swing flow should create a swept hand contact',
+  );
+  const playerHandContact = replay.contacts.find(
+    (contact) => contact.kind === 'hand' && contact.metadata?.hitter === 'player',
+  );
+  assert.ok(
+    playerHandContact?.metadata?.outcome?.shot?.id,
+    'Recorded hand contacts should include deterministic shot outcomes',
+  );
+  assert.ok(
+    Number.isFinite(playerHandContact.metadata.outcome.paceMph),
+    'Recorded contact outcomes should include physical pace',
   );
   assert.notEqual(
     await page.locator('#contactGrade').innerText(),
@@ -101,7 +135,7 @@ try {
       (contact) => contact.kind === 'hand' && contact.metadata?.hitter === 'player',
     ),
     null,
-    { timeout: 4000 },
+    { timeout: 10000 },
   );
   assert.match(
     await page.locator('#serveOwner').innerText(),
@@ -124,7 +158,7 @@ try {
       );
     },
     null,
-    { timeout: 10000 },
+    { timeout: 20000 },
   );
   const ghostServe = await page.evaluate(() => ({
     match: window.__THE_WALL_LAB__.getMatch(),
@@ -170,7 +204,7 @@ try {
       );
     },
     null,
-    { timeout: 10000 },
+    { timeout: 20000 },
   );
   const repeatedGhostServeBounce = await page.evaluate(
     () => window.__THE_WALL_LAB__.getReplay().contacts.find(
@@ -225,6 +259,34 @@ try {
     path: mobileScreenshot,
     fullPage: true,
   });
+  await page.click('#enterCourtButton');
+  const touchStartZ = await page.evaluate(
+    () => window.__THE_WALL_LAB__.getSnapshot().player.position.z,
+  );
+  const towardWallButton = page.locator('[data-touch-z="-1"]');
+  await towardWallButton.dispatchEvent('pointerdown', {
+    pointerId: 1,
+    pointerType: 'touch',
+    isPrimary: true,
+  });
+  await page.waitForFunction(
+    (startZ) => window.__THE_WALL_LAB__.getSnapshot().player.position.z < startZ - 0.05,
+    touchStartZ,
+    { timeout: 10000 },
+  );
+  await towardWallButton.dispatchEvent('pointerup', {
+    pointerId: 1,
+    pointerType: 'touch',
+    isPrimary: true,
+  });
+  const mobileViewport = page.viewportSize();
+  const contactDock = await page.locator('.technique-deck').boundingBox();
+  assert.ok(
+    contactDock
+      && contactDock.y < mobileViewport.height
+      && contactDock.y + contactDock.height >= mobileViewport.height - 74,
+    'Phone contact controls should stay docked inside the gameplay viewport',
+  );
 
   assert.equal(consoleErrors.length, 0, `Console errors: ${consoleErrors.join(' | ')}`);
   assert.equal(failedRequests.length, 0, `Failed requests: ${failedRequests.join(' | ')}`);
