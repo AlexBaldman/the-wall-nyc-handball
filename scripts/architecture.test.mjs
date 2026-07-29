@@ -11,6 +11,10 @@ import {
   getGhostProfile,
   observationDelayTicks,
 } from '../src/game/wall-ghost.js';
+import {
+  createWallSchoolState,
+  scoreWallSchoolContact,
+} from '../src/game/wall-school.js';
 import { createCourtProjection } from '../src/presentation/court-projection.js';
 import { createPlayerCommand } from '../src/sim/types.js';
 
@@ -44,6 +48,23 @@ assert.equal(
   }),
   true,
 );
+
+let wallSchool = { ...createWallSchoolState('pace'), active: true };
+const missedWallSchoolContact = scoreWallSchoolContact(wallSchool, {
+  quality: { pure: false },
+  paceMph: 50,
+  spinRpm: 0,
+});
+assert.equal(missedWallSchoolContact.state.progress, 0, 'A missed drill condition should reset the streak');
+for (let index = 0; index < 3; index += 1) {
+  const scored = scoreWallSchoolContact(wallSchool, {
+    quality: { pure: true },
+    paceMph: 40,
+    spinRpm: 0,
+  });
+  wallSchool = scored.state;
+}
+assert.equal(wallSchool.completed, true, 'Wall School should score the same physical contact outcomes used by matches');
 assert.deepEqual(rumbleRequest, {
   type: 'dual-rumble',
   options: {

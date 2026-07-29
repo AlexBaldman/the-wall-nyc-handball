@@ -69,6 +69,18 @@ try {
     true,
     'Starting practice should reveal the playable court',
   );
+  await page.click('[data-drill="pace"]');
+  assert.deepEqual(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getWallSchool()),
+    {
+      active: true,
+      completed: false,
+      drillId: 'pace',
+      progress: 0,
+      attempts: 0,
+    },
+    'Wall School should start an outcome-driven physical practice feed',
+  );
   await page.locator('.advanced-lab').evaluate((element) => {
     element.open = true;
   });
@@ -82,6 +94,11 @@ try {
   assert.match(dropResult, /official window/i, 'Drop test should land in the official range');
 
   await page.click('#resetLabButton');
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getWallSchool().active),
+    false,
+    'Reset should exit the active Wall School drill',
+  );
   await page.click('#feedButton');
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 3.8,

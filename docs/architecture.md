@@ -119,6 +119,10 @@ the coach, replay stream, match statistics, and future drills. The coordinator
 attaches that serializable outcome to the hand `ContactRecord`; UI code reads it
 but does not independently classify the shot.
 
+`src/game/wall-school.js` owns drill definitions and streak scoring. It consumes
+only the same serializable contact outcomes generated in a match, so a training
+clear can be replayed, audited, and later validated by an authoritative server.
+
 ### `src/styles/tokens.css`
 
 Defines shared foundation and semantic visual tokens for both experiences:

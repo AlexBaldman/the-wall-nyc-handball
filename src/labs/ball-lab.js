@@ -36,6 +36,11 @@ import {
   ghostAim,
   getGhostProfile,
 } from '../game/wall-ghost.js';
+import {
+  createWallSchoolState,
+  getWallSchoolDrill,
+  scoreWallSchoolContact,
+} from '../game/wall-school.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -112,6 +117,9 @@ const ui = Object.fromEntries(
     'handMetric',
     'bounceMetric',
     'contactReason',
+    'wallSchoolTitle',
+    'wallSchoolProgress',
+    'wallSchoolReason',
     'seedValue',
     'tickValue',
     'commandValue',
@@ -287,6 +295,7 @@ const state = {
     pointsWon: 0,
     pointsLost: 0,
   },
+  wallSchool: createWallSchoolState(),
   dropTracking: null,
   cameraIndex: 0,
   cameraFocalLength: 50,
@@ -319,6 +328,47 @@ function resetMatchStats() {
     pointsWon: 0,
     pointsLost: 0,
   };
+}
+
+function syncWallSchoolUi() {
+  const drill = getWallSchoolDrill(state.wallSchool.drillId);
+  const { active, completed, progress, attempts } = state.wallSchool;
+  ui.wallSchoolTitle.textContent = drill.label;
+  ui.wallSchoolProgress.textContent = completed
+    ? `${drill.goal}/${drill.goal} complete`
+    : `${progress}/${drill.goal} streak · ${attempts} tries`;
+  ui.wallSchoolReason.textContent = completed
+    ? 'Lesson cleared. Pick another drill or keep taking practice feeds.'
+    : active
+      ? drill.instruction
+      : 'Choose a lesson. Every score comes from the same physical contact data used in a match.';
+  document.querySelectorAll('[data-drill]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.drill === drill.id);
+  });
+}
+
+function startWallSchoolDrill(id) {
+  state.wallSchool = {
+    ...createWallSchoolState(id),
+    active: true,
+  };
+  syncWallSchoolUi();
+  feedBall();
+}
+
+function scoreWallSchool(outcome) {
+  const result = scoreWallSchoolContact(state.wallSchool, outcome);
+  state.wallSchool = result.state;
+  if (!result.result) return;
+  if (result.result.completed) {
+    state.wallSchool.active = false;
+    showCallout('Lesson cleared!');
+  } else if (result.result.passed) {
+    showCallout(`${result.result.progress}/${result.result.goal}`);
+  } else {
+    showCallout('Reset the streak');
+  }
+  syncWallSchoolUi();
 }
 
 function opponentSpeedLabel(profile) {
@@ -2131,6 +2181,7 @@ function handleHandContact(contact, hitter = 'player') {
       state.matchStats.bestPaceMph,
       outcome.paceMph,
     );
+    scoreWallSchool(outcome);
   }
 
   ui.speedMetric.textContent = outcome.paceMph.toFixed(1);
@@ -2149,10 +2200,18 @@ function handleHandContact(contact, hitter = 'player') {
       : 'The hand reached near its anatomical limit. Move your feet into the lane.';
   ui.resultLabel.textContent = `${actorLabel(hitter)} · ${outcome.shot.label} · ${outcome.paceMph.toFixed(1)} mph`;
   showCallout(outcome.quality.pure ? hitter === 'player' ? 'Pure!' : 'Ghost!' : 'Contact!');
-  showImpactFlash(contact.position, outcome.quality.pure ? 1.35 : 0.8);
-  playImpact(hitter === 'player' ? 185 : 154, 0.12);
+  const impactIntensity = THREE.MathUtils.clamp(
+    0.72 + outcome.paceMph / 44 + (outcome.quality.pure ? 0.42 : 0),
+    0.72,
+    2.1,
+  );
+  showImpactFlash(contact.position, impactIntensity);
+  playContactImpact(outcome, hitter);
   if (hitter === 'player') {
-    rumble(outcome.quality.pure ? 0.68 : 0.42, 75);
+    rumble(
+      THREE.MathUtils.clamp(0.22 + outcome.paceMph / 90 + (outcome.quality.pure ? 0.18 : 0), 0.25, 0.9),
+      outcome.quality.pure ? 92 : 68,
+    );
     state.hintProgress += 1;
     setOnboardingStage(3);
   }
@@ -2223,6 +2282,9 @@ function feedBall() {
   state.lastWallContact = null;
   state.wallContactsAtLastHand = 0;
   state.dropTracking = null;
+  const drill = state.wallSchool.active
+    ? getWallSchoolDrill(state.wallSchool.drillId)
+    : null;
   const feedSide = state.feeds % 2 === 1 ? 1 : -1;
   const feedX = THREE.MathUtils.clamp(
     state.player.position.x + feedSide * (0.42 + rng.signed(0.06)),
@@ -2231,16 +2293,26 @@ function feedBall() {
   );
   state.ball = createBallState({
     active: true,
-    position: { x: feedX, y: 1.52, z: BALL.radius + 0.01 },
-    velocity: { x: rng.signed(0.22), y: -1.05, z: 7.28 },
-    angularVelocity: { x: 18, y: rng.signed(4), z: 0 },
+    position: {
+      x: feedX,
+      y: drill?.id === 'pace' ? 1.26 : drill?.id === 'spin' ? 1.68 : 1.52,
+      z: BALL.radius + 0.01,
+    },
+    velocity: {
+      x: rng.signed(drill?.id === 'spin' ? 0.42 : 0.22),
+      y: drill?.id === 'pace' ? -0.58 : -1.05,
+      z: drill?.id === 'pace' ? 7.72 : 7.28,
+    },
+    angularVelocity: { x: drill?.id === 'spin' ? 42 : 18, y: rng.signed(4), z: 0 },
   });
   state.trail.length = 0;
   ui.resultLabel.textContent = 'Read the bounce';
   ui.heightMetric.textContent = '—';
   ui.bounceMetric.textContent = '—';
   ui.contactGrade.textContent = 'Ball approaching';
-  ui.contactReason.textContent = 'Move into its lane. Point at the wall. Hold a contact and release through the rise.';
+  ui.contactReason.textContent = drill
+    ? `${drill.label}: ${drill.instruction}`
+    : 'Move into its lane. Point at the wall. Hold a contact and release through the rise.';
   syncMatchUi();
 }
 
@@ -2285,6 +2357,7 @@ function resetLab({ resetSeed = true } = {}) {
   state.mode = 'practice';
   state.match = createStreetMatchState();
   resetMatchStats();
+  state.wallSchool = createWallSchoolState();
   closeMatchResult();
   state.ball = createBallState({
     active: false,
@@ -2354,6 +2427,7 @@ function resetLab({ resetSeed = true } = {}) {
   syncTechniqueUi();
   syncMatchUi();
   syncOpponentUi();
+  syncWallSchoolUi();
 }
 
 function currentSnapshot(events = []) {
@@ -2834,6 +2908,17 @@ function playImpact(frequency, gainValue) {
   noise.start(now);
 }
 
+function playContactImpact(outcome, hitter) {
+  const pace = THREE.MathUtils.clamp(outcome.paceMph, 0, 70);
+  const spinTexture = THREE.MathUtils.clamp(outcome.spinRpm / 1300, 0, 0.42);
+  const baseFrequency = (hitter === 'player' ? 138 : 124) + pace * 2.15;
+  const gain = 0.055 + pace / 850 + (outcome.quality.pure ? 0.035 : 0);
+  playImpact(baseFrequency, gain);
+  if (outcome.quality.pure) {
+    window.setTimeout(() => playImpact(baseFrequency * (1.52 + spinTexture), gain * 0.28), 18);
+  }
+}
+
 function rumble(intensity, milliseconds) {
   const gamepad = findGamepad(input.gamepadIndex);
   playGamepadRumble(gamepad, {
@@ -2984,6 +3069,10 @@ document.querySelectorAll('[data-camera]').forEach((button) => {
   button.addEventListener('click', () => setCamera(button.dataset.camera));
 });
 
+document.querySelectorAll('[data-drill]').forEach((button) => {
+  button.addEventListener('click', () => startWallSchoolDrill(button.dataset.drill));
+});
+
 ui.cameraZoom.addEventListener('input', () => {
   state.cameraFocalLength = Number(ui.cameraZoom.value);
   ui.cameraZoomValue.textContent = `${state.cameraFocalLength} mm`;
@@ -3061,6 +3150,7 @@ syncPhysicsUi();
 syncTechniqueUi();
 syncMatchUi();
 syncOpponentUi();
+syncWallSchoolUi();
 setOnboardingStage(0);
 ui.seedValue.textContent = `0x${SEED.toString(16).toUpperCase()}`;
 window.__THE_WALL_LAB__ = {
@@ -3069,6 +3159,8 @@ window.__THE_WALL_LAB__ = {
   getMatch: () => cloneSerializable(state.match),
   getMatchStats: () => cloneSerializable(state.matchStats),
   getDifficulty: () => state.difficulty,
+  getWallSchool: () => cloneSerializable(state.wallSchool),
+  startWallSchoolDrill,
   getAiObservation: () => cloneSerializable(state.ai.observation),
   setDifficulty,
   feedBall,
