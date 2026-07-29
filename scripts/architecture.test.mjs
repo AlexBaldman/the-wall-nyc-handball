@@ -131,6 +131,23 @@ const observedBall = createGhostObservation({
 });
 assert.equal(observedBall.sourceTick, 10);
 assert.ok(observedBall.deliveredTick > observedBall.sourceTick);
+assert.equal(Object.isFrozen(regular.positionNoise), true);
+assert.deepEqual(
+  createGhostObservation({
+    profile: regular,
+    ball: null,
+    tick: 12,
+    simulationHz: 120,
+  }),
+  {
+    active: false,
+    position: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    angularVelocity: { x: 0, y: 0, z: 0 },
+    sourceTick: 12,
+    deliveredTick: 24,
+  },
+);
 
 const plantedCommand = createPlayerCommand({
   modifiers: { setPosition: true },

@@ -106,6 +106,12 @@ if (!css.includes('@media (prefers-reduced-motion: reduce)')) {
 if (!labCss.includes('@media (prefers-reduced-motion: reduce)')) {
   fail('Accuracy Lab reduced-motion styling is missing.');
 }
+if (!labHtml.includes('id="matchResult" role="dialog" aria-modal="true"')) {
+  fail('Match result must expose modal dialog semantics.');
+}
+if (!labCss.includes('body.is-playing.has-match-result .technique-deck')) {
+  fail('Mobile match results must not be obscured by fixed contact controls.');
+}
 
 for (const modulePath of [
   'src/game/match-app.js',
@@ -115,6 +121,7 @@ for (const modulePath of [
   'src/platform/gamepad.js',
   'src/presentation/court-projection.js',
   'src/sim/types.js',
+  'src/sim/contact-outcome.js',
   'src/sim/court.js',
   'src/sim/random.js',
   'src/sim/replay.js',

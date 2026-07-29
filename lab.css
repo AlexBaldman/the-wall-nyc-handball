@@ -1644,6 +1644,12 @@ dd {
         box-shadow: 5px 5px 0 var(--pink);
     }
 
+    body.is-playing.has-match-result .technique-deck,
+    body.is-playing.has-match-result .rally-button {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
     body.is-playing .touch-move {
         position: absolute;
         z-index: 6;

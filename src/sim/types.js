@@ -5,6 +5,10 @@ function finiteNumber(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function nullableString(value) {
+  return value == null ? null : String(value);
+}
+
 export function vec3(value = {}) {
   return {
     x: finiteNumber(value.x),
@@ -114,9 +118,9 @@ export function createSimulationSnapshot(overrides = {}) {
             player: Math.max(0, Math.trunc(finiteNumber(overrides.match.scores?.player))),
             ai: Math.max(0, Math.trunc(finiteNumber(overrides.match.scores?.ai))),
           },
-          server: overrides.match.server ?? 'player',
-          expectedHitter: overrides.match.expectedHitter ?? null,
-          lastHitter: overrides.match.lastHitter ?? null,
+          server: String(overrides.match.server ?? 'player'),
+          expectedHitter: nullableString(overrides.match.expectedHitter),
+          lastHitter: nullableString(overrides.match.lastHitter),
           serveFaults: Math.max(0, Math.trunc(finiteNumber(overrides.match.serveFaults))),
           rallyContacts: Math.max(0, Math.trunc(finiteNumber(overrides.match.rallyContacts))),
           wallReached: Boolean(overrides.match.wallReached),
@@ -125,9 +129,9 @@ export function createSimulationSnapshot(overrides = {}) {
             Math.trunc(finiteNumber(overrides.match.bouncesAfterWall)),
           ),
           serveInFlight: Boolean(overrides.match.serveInFlight),
-          pointWinner: overrides.match.pointWinner ?? null,
-          pointReason: overrides.match.pointReason ?? null,
-          matchWinner: overrides.match.matchWinner ?? null,
+          pointWinner: nullableString(overrides.match.pointWinner),
+          pointReason: nullableString(overrides.match.pointReason),
+          matchWinner: nullableString(overrides.match.matchWinner),
         }
       : null,
     hand: {

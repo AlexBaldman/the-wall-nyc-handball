@@ -64,9 +64,16 @@ const PROFILES = {
   },
 };
 
+function deepFreeze(value) {
+  for (const nested of Object.values(value)) {
+    if (nested && typeof nested === 'object') deepFreeze(nested);
+  }
+  return Object.freeze(value);
+}
+
 export const GHOST_PROFILES = Object.freeze(
   Object.fromEntries(
-    Object.entries(PROFILES).map(([id, profile]) => [id, Object.freeze(profile)]),
+    Object.entries(PROFILES).map(([id, profile]) => [id, deepFreeze(profile)]),
   ),
 );
 
@@ -87,8 +94,19 @@ export function createGhostObservation({
 }) {
   const activeProfile = getGhostProfile(profile?.id);
   const random = typeof signedRandom === 'function' ? signedRandom : () => 0;
+  const deliveredTick = tick + observationDelayTicks(activeProfile, simulationHz);
+  if (!ball) {
+    return {
+      active: false,
+      position: { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      angularVelocity: { x: 0, y: 0, z: 0 },
+      sourceTick: tick,
+      deliveredTick,
+    };
+  }
   return {
-    active: Boolean(ball?.active),
+    active: Boolean(ball.active),
     position: {
       x: ball.position.x + random(activeProfile.positionNoise.x),
       y: Math.max(0, ball.position.y + random(activeProfile.positionNoise.y)),
@@ -105,7 +123,7 @@ export function createGhostObservation({
       z: ball.angularVelocity.z + random(activeProfile.spinNoise),
     },
     sourceTick: tick,
-    deliveredTick: tick + observationDelayTicks(activeProfile, simulationHz),
+    deliveredTick,
   };
 }
 

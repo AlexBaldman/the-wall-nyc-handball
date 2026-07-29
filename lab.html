@@ -48,7 +48,7 @@
                         <p class="court-entry__versus"><span>You</span><i>vs</i><span id="entryOpponentName">Wall Ghost</span></p>
                         <h2 id="courtEntryTitle">Step on the court.</h2>
                         <p>Four natural contacts. Hold for preparation, aim with the wall target, then release. The physics—not a preset animation—decide the shot.</p>
-                        <div class="entry-difficulty" aria-label="Choose rival skill">
+                        <div class="entry-difficulty" role="group" aria-label="Choose rival skill">
                             <button type="button" data-difficulty="rookie">
                                 <span>Rookie</span><small>Late reads · safe hands</small>
                             </button>
@@ -113,7 +113,7 @@
                         <small id="chargeHint">Control is already available</small>
                     </div>
 
-                    <div class="touch-move" aria-label="Touch movement controls">
+                    <div class="touch-move" role="group" aria-label="Touch movement controls">
                         <button type="button" data-touch-x="0" data-touch-z="-1" aria-label="Move toward the wall">▲</button>
                         <button type="button" data-touch-x="-1" data-touch-z="0" aria-label="Move left">◀</button>
                         <span>Move</span>
@@ -121,7 +121,7 @@
                         <button type="button" data-touch-x="0" data-touch-z="1" aria-label="Move away from the wall">▼</button>
                     </div>
 
-                    <div class="camera-dock" aria-label="Camera controls">
+                    <div class="camera-dock" role="group" aria-label="Camera controls">
                         <button class="active" type="button" data-camera="tactical">Tactical</button>
                         <button type="button" data-camera="player">Player</button>
                         <button type="button" data-camera="courtside">Courtside</button>
@@ -130,7 +130,7 @@
 
                     <div class="callout" id="callout" aria-live="assertive"></div>
 
-                    <section class="match-result" id="matchResult" aria-labelledby="matchResultTitle" hidden>
+                    <section class="match-result" id="matchResult" role="dialog" aria-modal="true" aria-labelledby="matchResultTitle" hidden>
                         <span class="match-result__tag" id="matchResultTag">Court yours</span>
                         <h2 id="matchResultTitle">You took the wall.</h2>
                         <p id="matchResultScore">11–7</p>
@@ -155,7 +155,7 @@
                     <button id="resetLabButton" type="button"><span>Reset match</span><small>Same deterministic seed</small></button>
                 </div>
 
-                <div class="technique-deck" aria-label="Contact controls">
+                <div class="technique-deck" role="group" aria-label="Contact controls">
                     <button class="technique-button active" type="button" data-technique="palm">
                         <kbd>Space / A</kbd><span>Open palm</span><small>Control</small>
                     </button>
@@ -186,7 +186,7 @@
                         <small id="opponentTitle">The Counterpuncher</small>
                     </div>
                     <p id="opponentDescription">Reads your position, redirects pace, and shades the open wall.</p>
-                    <div class="difficulty-switcher" aria-label="Rival difficulty">
+                    <div class="difficulty-switcher" role="group" aria-label="Rival difficulty">
                         <button type="button" data-difficulty="rookie">Rookie</button>
                         <button class="active" type="button" data-difficulty="regular">Regular</button>
                         <button type="button" data-difficulty="champion">Champion</button>

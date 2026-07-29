@@ -184,10 +184,6 @@ const outcomeContact = (overrides = {}) => ({
   outgoingSpin: { x: 0, y: 0, z: 0 },
   technique: 'palm',
   charge: 0.65,
-  metadata: {
-    handVelocity: { x: 0, y: 0, z: -8 },
-    modifiers: {},
-  },
   ...overrides,
   metadata: {
     handVelocity: { x: 0, y: 0, z: -8 },
@@ -273,6 +269,16 @@ assert.equal(snapshot.match.targetScore, 11);
 assert.deepEqual(snapshot.match.scores, { player: 4, ai: 3 });
 assert.equal(snapshot.match.expectedHitter, 'ai');
 assert.doesNotThrow(() => JSON.stringify(snapshot), 'Snapshot must be serializable');
+const normalizedMatchSnapshot = createSimulationSnapshot({
+  match: {
+    server: 7,
+    expectedHitter: false,
+    pointReason: 404,
+  },
+});
+assert.equal(normalizedMatchSnapshot.match.server, '7');
+assert.equal(normalizedMatchSnapshot.match.expectedHitter, 'false');
+assert.equal(normalizedMatchSnapshot.match.pointReason, '404');
 
 const replayRecorder = createReplayRecorder({ seed: 42, label: 'test' });
 replayRecorder.recordCommand(createPlayerCommand({

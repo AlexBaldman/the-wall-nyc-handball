@@ -296,6 +296,7 @@ const state = {
   hintProgress: 0,
   pendingMissCheck: false,
   tempoScale: 0.78,
+  setPositionVisible: false,
 };
 
 function activeGhostProfile() {
@@ -338,7 +339,14 @@ function syncOpponentUi() {
   ui.aiReadLabel.textContent = `Waiting · ${profile.observationDelayMs} ms delay`;
   document.querySelectorAll('[data-difficulty]').forEach((button) => {
     button.classList.toggle('active', button.dataset.difficulty === profile.id);
-    button.disabled = state.mode === 'match' && state.match.active;
+  });
+  syncDifficultyAvailability();
+}
+
+function syncDifficultyAvailability() {
+  const disabled = state.mode === 'match' && state.match.active;
+  document.querySelectorAll('[data-difficulty]').forEach((button) => {
+    button.disabled = disabled;
   });
 }
 
@@ -397,6 +405,7 @@ function registerPlayerMovementIntent() {
 
 function closeMatchResult() {
   ui.matchResult.hidden = true;
+  document.body.classList.remove('has-match-result');
   canvas.focus();
 }
 
@@ -413,6 +422,8 @@ function showMatchResult(winner) {
   ui.resultCleanContacts.textContent = `${cleanRate}%`;
   ui.resultBestPace.textContent = `${stats.bestPaceMph.toFixed(1)} mph`;
   ui.matchResult.hidden = false;
+  document.body.classList.add('has-match-result');
+  window.requestAnimationFrame(() => ui.rematchButton.focus());
 }
 
 const scene = new THREE.Scene();
@@ -1459,8 +1470,11 @@ function updatePlayer() {
     COURT.longLine + COURT.runback - 0.6,
   );
   state.player.preparation = currentCharge();
-  ui.setPositionReadout.classList.toggle('is-active', movement.setOffBall);
-  ui.setPositionReadout.setAttribute('aria-hidden', String(!movement.setOffBall));
+  if (movement.setOffBall !== state.setPositionVisible) {
+    state.setPositionVisible = movement.setOffBall;
+    ui.setPositionReadout.classList.toggle('is-active', movement.setOffBall);
+    ui.setPositionReadout.setAttribute('aria-hidden', String(!movement.setOffBall));
+  }
 }
 
 function updateAiPerception() {
@@ -2312,6 +2326,7 @@ function resetLab({ resetSeed = true } = {}) {
   state.replayPlayback = null;
   state.hintProgress = 0;
   state.pendingMissCheck = false;
+  state.setPositionVisible = false;
   input.activeTechnique = null;
   input.prepareStartedAt = 0;
   input.modifiers = {
@@ -2617,9 +2632,7 @@ function syncMatchUi() {
   ui.rallyMetric.textContent = `${match.rallyContacts}-contact rally`;
   ui.matchRibbon.classList.toggle('is-match', inMatch);
   ui.rallyButton.disabled = inMatch && match.active;
-  document.querySelectorAll('[data-difficulty]').forEach((button) => {
-    button.disabled = inMatch && match.active;
-  });
+  syncDifficultyAvailability();
 
   if (!inMatch) {
     ui.turnIndicator.textContent = state.mode === 'drop' ? 'Official ball test' : 'Practice court';
@@ -2963,6 +2976,8 @@ document.querySelectorAll('[data-touch-x][data-touch-z]').forEach((button) => {
   button.addEventListener('pointerdown', beginMove);
   button.addEventListener('pointerup', endMove);
   button.addEventListener('pointercancel', endMove);
+  button.addEventListener('pointerleave', endMove);
+  button.addEventListener('lostpointercapture', endMove);
 });
 
 document.querySelectorAll('[data-camera]').forEach((button) => {

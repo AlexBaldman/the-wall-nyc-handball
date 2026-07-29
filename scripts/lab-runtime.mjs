@@ -279,9 +279,12 @@ try {
     pointerType: 'touch',
     isPrimary: true,
   });
+  const mobileViewport = page.viewportSize();
   const contactDock = await page.locator('.technique-deck').boundingBox();
   assert.ok(
-    contactDock && contactDock.y < 844 && contactDock.y + contactDock.height >= 770,
+    contactDock
+      && contactDock.y < mobileViewport.height
+      && contactDock.y + contactDock.height >= mobileViewport.height - 74,
     'Phone contact controls should stay docked inside the gameplay viewport',
   );
 
