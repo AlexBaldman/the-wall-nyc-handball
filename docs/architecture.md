@@ -48,6 +48,8 @@ Owns competitive truth:
 
 - official court, ball, material, and solver measurements
 - deterministic ball integration and contact resolution
+- deterministic contact outcomes: emergent shot identity, pace, spin, hand
+  speed, spacing, preparation, and quality
 - match/serve/scoring rules
 - seeded randomness
 - versioned commands, contacts, snapshots, and replay records
@@ -112,6 +114,11 @@ movement, aim, and decision profiles. The next safe split is a pure
 profiles and emits `PlayerCommand` records. Keep the Three.js coordinator
 responsible only for delivering observations and applying the resulting command.
 
+`src/sim/contact-outcome.js` owns the post-collision interpretation shared by
+the coach, replay stream, match statistics, and future drills. The coordinator
+attaches that serializable outcome to the hand `ContactRecord`; UI code reads it
+but does not independently classify the shot.
+
 ### `src/styles/tokens.css`
 
 Defines shared foundation and semantic visual tokens for both experiences:
@@ -152,8 +159,8 @@ to it incrementally instead of being rewritten all at once.
   2.5D projection
 - `npm run test:vendor` proves the deployed Three.js files and license exactly
   match the pinned package
-- `npm run test:physics` protects SI geometry, ballistics, hand contacts, rules,
-  seeded randomness, and replay serialization
+- `npm run test:physics` protects SI geometry, ballistics, hand contacts,
+  emergent contact outcomes, rules, seeded randomness, and replay serialization
 - `npm run test:smoke` protects page/module wiring, assets, DOM bindings, core
   systems, and reduced-motion styles
 - `npm run test:lab-runtime` protects the real WebGL/browser flow, physical

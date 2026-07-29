@@ -12,6 +12,7 @@ import {
 import { BALL, COURT, MATERIAL, PHYSICS, UNITS } from '../sim/court.js';
 import { createSeededRandom } from '../sim/random.js';
 import { createReplayRecorder } from '../sim/replay.js';
+import { deriveContactOutcome } from '../sim/contact-outcome.js';
 import {
   awardRally,
   beginPoint,
@@ -1925,19 +1926,6 @@ function actorLabel(actor) {
   return actor === 'player' ? 'You' : activeGhostProfile().name;
 }
 
-function classifyEmergentContact(contact, speedMph) {
-  const modifiers = contact.metadata.modifiers ?? {};
-  const height = contact.position.y;
-  const sideSpin = Math.abs(contact.outgoingSpin.y);
-  if (height < 0.5 && contact.charge > 0.72 && modifiers.drive) return 'Kill drive';
-  if (height < 0.42 && contact.technique === 'backspin') return 'Roller attempt';
-  if (modifiers.lift && contact.technique === 'backspin') return 'Touch lob';
-  if (sideSpin > 58) return 'Hook';
-  if (contact.technique === 'topspin' && contact.charge > 0.7) return 'Topspin cut';
-  if (contact.technique === 'fist' && speedMph > 42) return 'Knuckle drive';
-  return TECHNIQUES[contact.technique].label;
-}
-
 function finishPointPresentation(point) {
   const winnerName = actorLabel(point.winner);
   const winnerVerb = point.winner === 'player' ? 'own' : 'owns';
@@ -2113,54 +2101,44 @@ function handleHandContact(contact, hitter = 'player') {
   } else {
     state.aiSwing.madeContact = true;
   }
-  recorder.recordContact(contact);
-
   if (state.mode === 'match') {
     state.match = registerLegalContact(state.match, hitter, state.ball);
   }
 
-  const speedMph = magnitude(contact.outgoingVelocity) * 2.236936;
-  const spinRpm = magnitude(contact.outgoingSpin) * 60 / (Math.PI * 2);
-  const handSpeed = magnitude(contact.metadata.handVelocity);
   const actor = hitter === 'player' ? state.player : state.ai;
-  const lateralSpacing = Math.abs(contact.position.x - actor.position.x);
-  const spacingGrade = lateralSpacing < 0.28
-    ? 'Jammed'
-    : lateralSpacing > 0.64
-      ? 'Reached'
-      : 'Clean';
-  const prepGrade = contact.charge >= 0.92
-    ? 'Loaded'
-    : contact.charge >= 0.55
-      ? 'Set'
-      : 'Quick';
-  const pure = spacingGrade === 'Clean' && contact.charge >= 0.55;
-  const emergentShot = classifyEmergentContact(contact, speedMph);
+  const outcome = deriveContactOutcome(contact, actor.position);
+  contact.metadata.outcome = outcome;
+  recorder.recordContact(contact);
 
   if (hitter === 'player') {
     state.matchStats.totalContacts += 1;
-    if (pure) state.matchStats.cleanContacts += 1;
-    state.matchStats.bestPaceMph = Math.max(state.matchStats.bestPaceMph, speedMph);
+    if (outcome.quality.pure) state.matchStats.cleanContacts += 1;
+    state.matchStats.bestPaceMph = Math.max(
+      state.matchStats.bestPaceMph,
+      outcome.paceMph,
+    );
   }
 
-  ui.speedMetric.textContent = speedMph.toFixed(1);
-  ui.spinMetric.textContent = Math.round(spinRpm);
-  ui.contactGrade.textContent = pure ? 'Pure contact' : `${spacingGrade} contact`;
-  ui.spacingMetric.textContent = spacingGrade;
-  ui.prepMetric.textContent = `${prepGrade} · ${Math.round(contact.charge * 100)}%`;
-  ui.handMetric.textContent = `${handSpeed.toFixed(1)} m/s`;
+  ui.speedMetric.textContent = outcome.paceMph.toFixed(1);
+  ui.spinMetric.textContent = outcome.spinRpm;
+  ui.contactGrade.textContent = outcome.quality.pure
+    ? 'Pure contact'
+    : `${outcome.spacing.label} contact`;
+  ui.spacingMetric.textContent = outcome.spacing.label;
+  ui.prepMetric.textContent = `${outcome.preparation.label} · ${Math.round(outcome.preparation.charge * 100)}%`;
+  ui.handMetric.textContent = `${outcome.handSpeedMps.toFixed(1)} m/s`;
   ui.bounceMetric.textContent = 'Waiting';
-  ui.contactReason.textContent = pure
-    ? `${hitter === 'player' ? 'Your' : `${activeGhostProfile().name}’s`} ${emergentShot.toLowerCase()} met the ball inside a balanced reach window. Physics now owns the result.`
-    : spacingGrade === 'Jammed'
+  ui.contactReason.textContent = outcome.quality.pure
+    ? `${hitter === 'player' ? 'Your' : `${activeGhostProfile().name}’s`} ${outcome.shot.label.toLowerCase()} met the ball inside a balanced reach window. Physics now owns the result.`
+    : outcome.spacing.id === 'jammed'
       ? 'The ball got too close to the body. Create space earlier for cleaner direction.'
       : 'The hand reached near its anatomical limit. Move your feet into the lane.';
-  ui.resultLabel.textContent = `${actorLabel(hitter)} · ${emergentShot} · ${speedMph.toFixed(1)} mph`;
-  showCallout(pure ? hitter === 'player' ? 'Pure!' : 'Ghost!' : 'Contact!');
-  showImpactFlash(contact.position, pure ? 1.35 : 0.8);
+  ui.resultLabel.textContent = `${actorLabel(hitter)} · ${outcome.shot.label} · ${outcome.paceMph.toFixed(1)} mph`;
+  showCallout(outcome.quality.pure ? hitter === 'player' ? 'Pure!' : 'Ghost!' : 'Contact!');
+  showImpactFlash(contact.position, outcome.quality.pure ? 1.35 : 0.8);
   playImpact(hitter === 'player' ? 185 : 154, 0.12);
   if (hitter === 'player') {
-    rumble(pure ? 0.68 : 0.42, 75);
+    rumble(outcome.quality.pure ? 0.68 : 0.42, 75);
     state.hintProgress += 1;
     setOnboardingStage(3);
   }

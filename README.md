@@ -30,7 +30,7 @@ Version `0.5.0` promotes the true-scale 3D work from an instrumented lab into a 
 - emergent kill, roller, lob, hook, cut, and knuckle labels assigned after physical contact instead of selected as canned trajectories
 - perception-limited opponent reads sampled at profile-specific rates, perturbed with seeded noise, and projected forward through the same ballistics model
 - live contact explanations for clean spacing, jams, reaches, air swings, floor-before-wall downs, wall height, and first bounce
-- versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data—including score, server, expected hitter, and point state—plus replay JSON export
+- versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data—including score, server, expected hitter, point state, and deterministic shot/contact outcomes—plus replay JSON export
 - deterministic competitive randomness in both the new lab and the preserved match baseline
 - automated geometry, drop, spin, tunneling, swept-hand, service/scoring, serialization, player/Ghost serve, delayed-perception, WebGL, interaction, and responsive-layout checks
 

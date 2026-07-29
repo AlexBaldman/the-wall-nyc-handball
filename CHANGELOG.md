@@ -9,6 +9,7 @@
 - added Rookie, Regular, and Champion Wall Ghost profiles with explicit perception delay, observation noise, foot speed, recovery depth, aim error, and aggression
 - added a court-entry flow, progressive move/prepare/release coaching, live opponent scouting, and post-match contact statistics
 - added emergent kill, roller, lob, hook, cut, and knuckle descriptions derived after physical contact
+- promoted contact outcomes into deterministic replay metadata with pace, spin, hand speed, spacing, preparation, and contact-quality grades
 - added a serializable off-ball Set modifier with keyboard and right-stick-click controls
 - improved strike readability with preparation/torso motion, court-positioned impact flashes, and layered impact noise
 - moved geometry, coefficient tuning, drop testing, and replay export behind an optional accuracy-tools drawer
@@ -16,6 +17,7 @@
 ### Architecture and verification
 
 - extracted pure Wall Ghost profiles and decision helpers from the Three.js coordinator
+- extracted the contact-outcome model from the Three.js coordinator so training, replay, AI, and future netcode share one result
 - extended versioned player commands with the off-ball Set intent
 - included authoritative score, service possession, expected hitter, faults, rally length, and winner state in simulation snapshots
 - added profile, command-boundary, race-to-11, court-entry, difficulty-selection, and responsive browser coverage

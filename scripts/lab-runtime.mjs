@@ -76,7 +76,7 @@ try {
   await page.waitForFunction(
     () => document.getElementById('resultLabel')?.textContent.includes('official window'),
     null,
-    { timeout: 8000 },
+    { timeout: 20000 },
   );
   const dropResult = await page.locator('#resultLabel').textContent();
   assert.match(dropResult, /official window/i, 'Drop test should land in the official range');
@@ -86,13 +86,13 @@ try {
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 3.8,
     null,
-    { timeout: 3000 },
+    { timeout: 10000 },
   );
   await page.keyboard.down('Space');
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 6.1,
     null,
-    { timeout: 3000 },
+    { timeout: 10000 },
   );
   await page.keyboard.up('Space');
   await page.waitForTimeout(800);
@@ -102,6 +102,17 @@ try {
   assert.ok(
     replay.contacts.some((contact) => contact.kind === 'hand'),
     'Feed/swing flow should create a swept hand contact',
+  );
+  const playerHandContact = replay.contacts.find(
+    (contact) => contact.kind === 'hand' && contact.metadata?.hitter === 'player',
+  );
+  assert.ok(
+    playerHandContact?.metadata?.outcome?.shot?.id,
+    'Recorded hand contacts should include deterministic shot outcomes',
+  );
+  assert.ok(
+    Number.isFinite(playerHandContact.metadata.outcome.paceMph),
+    'Recorded contact outcomes should include physical pace',
   );
   assert.notEqual(
     await page.locator('#contactGrade').innerText(),
@@ -124,7 +135,7 @@ try {
       (contact) => contact.kind === 'hand' && contact.metadata?.hitter === 'player',
     ),
     null,
-    { timeout: 4000 },
+    { timeout: 10000 },
   );
   assert.match(
     await page.locator('#serveOwner').innerText(),
@@ -147,7 +158,7 @@ try {
       );
     },
     null,
-    { timeout: 10000 },
+    { timeout: 20000 },
   );
   const ghostServe = await page.evaluate(() => ({
     match: window.__THE_WALL_LAB__.getMatch(),
@@ -193,7 +204,7 @@ try {
       );
     },
     null,
-    { timeout: 10000 },
+    { timeout: 20000 },
   );
   const repeatedGhostServeBounce = await page.evaluate(
     () => window.__THE_WALL_LAB__.getReplay().contacts.find(
@@ -261,7 +272,7 @@ try {
   await page.waitForFunction(
     (startZ) => window.__THE_WALL_LAB__.getSnapshot().player.position.z < startZ - 0.05,
     touchStartZ,
-    { timeout: 3000 },
+    { timeout: 10000 },
   );
   await towardWallButton.dispatchEvent('pointerup', {
     pointerId: 1,

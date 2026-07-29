@@ -8,6 +8,7 @@ import {
   sweepMovingSpheres,
 } from '../src/sim/ballistics.js';
 import { BALL, COURT, MATERIAL, PHYSICS, UNITS, courtRatios } from '../src/sim/court.js';
+import { deriveContactOutcome } from '../src/sim/contact-outcome.js';
 import { createSeededRandom } from '../src/sim/random.js';
 import { createReplayRecorder, validateReplay } from '../src/sim/replay.js';
 import {
@@ -176,6 +177,71 @@ assert.ok(handContact, 'Swept moving hand should create a contact record');
 assert.ok(handBall.velocity.z < 0, 'A forward swing should send the incoming ball toward the wall');
 assert.equal(handContact.technique, 'topspin');
 assert.ok(handContact.outgoingSpin.x < 0, 'Topspin contact should create forward rotation');
+
+const outcomeContact = (overrides = {}) => ({
+  position: { x: 0.45, y: 0.8, z: 4 },
+  outgoingVelocity: { x: 0, y: 0, z: -20 },
+  outgoingSpin: { x: 0, y: 0, z: 0 },
+  technique: 'palm',
+  charge: 0.65,
+  metadata: {
+    handVelocity: { x: 0, y: 0, z: -8 },
+    modifiers: {},
+  },
+  ...overrides,
+  metadata: {
+    handVelocity: { x: 0, y: 0, z: -8 },
+    modifiers: {},
+    ...overrides.metadata,
+  },
+});
+
+const pureOutcome = deriveContactOutcome(outcomeContact(), { x: 0, y: 0, z: 4 });
+assert.equal(pureOutcome.quality.id, 'pure');
+assert.equal(pureOutcome.shot.id, 'palm');
+assert.equal(pureOutcome.paceMph, 44.739);
+
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    position: { x: 0.45, y: 0.4, z: 4 },
+    charge: 0.8,
+    metadata: { modifiers: { drive: true } },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'kill-drive',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    position: { x: 0.45, y: 0.35, z: 4 },
+    technique: 'backspin',
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'roller-attempt',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'backspin',
+    metadata: { modifiers: { lift: true } },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'touch-lob',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    outgoingSpin: { x: 0, y: 70, z: 0 },
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'hook',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'topspin',
+    charge: 0.8,
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'topspin-cut',
+);
+assert.equal(
+  deriveContactOutcome(outcomeContact({
+    technique: 'fist',
+  }), { x: 0, y: 0, z: 4 }).shot.id,
+  'knuckle-drive',
+);
 
 const firstRandom = createSeededRandom(42);
 const secondRandom = createSeededRandom(42);
