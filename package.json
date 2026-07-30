@@ -1,6 +1,6 @@
 {
   "name": "the-wall-nyc-handball",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "description": "An accuracy-first NYC one-wall handball game with a true-scale 3D physics lab.",

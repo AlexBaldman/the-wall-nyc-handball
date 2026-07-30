@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.1 — Own the contact
+
+### Feel pass
+
+- added a playable 3D Wall School with Clean Three, Loaded Pace, and Spin Shape drills that score the same deterministic contact outcomes used by matches
+- added drill-specific physical feeds and live streak/progress coaching directly beside the court
+- strengthened contact presentation by scaling impact flash, audio layers, and controller rumble with actual pace, spin, and contact quality
+
+### Architecture and verification
+
+- extracted pure Wall School state and scoring into a renderer-free module, preparing the same drill definitions for career progression and future online challenge validation
+- added deterministic drill scoring coverage and smoke coverage for the new simulation module
+
 ## 0.5.0 — Take the wall
 
 ### 3D street match

@@ -118,6 +118,7 @@ for (const modulePath of [
   'src/game/match-content.js',
   'src/game/match-environment.js',
   'src/game/wall-ghost.js',
+  'src/game/wall-school.js',
   'src/platform/gamepad.js',
   'src/presentation/court-projection.js',
   'src/sim/types.js',

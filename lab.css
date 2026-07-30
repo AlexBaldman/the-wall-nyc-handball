@@ -1128,6 +1128,48 @@ kbd {
     box-shadow: inset 3px 0 var(--aqua);
 }
 
+.wall-school-card {
+    box-shadow: inset 3px 0 var(--lime);
+}
+
+.drill-switcher {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    margin-top: 0.8rem;
+    background: var(--line);
+}
+
+.drill-switcher button {
+    min-height: 34px;
+    color: var(--muted);
+    font: 800 0.64rem/1 "Barlow Condensed", sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--panel-raised);
+}
+
+.drill-switcher button.active {
+    color: var(--night);
+    background: var(--lime);
+}
+
+.wall-school-progress {
+    display: block;
+    margin-top: 0.7rem;
+    color: var(--lime);
+    font: 900 0.95rem/1 "Barlow Condensed", sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.wall-school-card p {
+    margin: 0.55rem 0 0;
+    color: var(--muted);
+    font-size: 0.67rem;
+    line-height: 1.5;
+}
+
 .advanced-lab > summary {
     min-height: 48px;
     padding: 1rem;

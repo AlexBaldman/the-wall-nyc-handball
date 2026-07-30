@@ -10,7 +10,7 @@ This is the extracted standalone version of the American handball concept that h
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
 
-Version `0.5.0` promotes the true-scale 3D work from an instrumented lab into a player-facing West 4th Street singles match while preserving the content-rich 2.5D game as the classic comparison build. The 3D match currently includes:
+Version `0.5.1` adds an outcome-driven Wall School to the player-facing West 4th Street singles match while preserving the content-rich 2.5D game as the classic comparison build. The 3D match currently includes:
 
 - true SI-unit court geometry: 20′ × 16′ wall, 16′ short line, 25′ service markers, and 34′ long line
 - the physical 1⅞″, 61 g one-wall ball plus a visible halo that never enlarges its collision shape
@@ -27,6 +27,7 @@ Version `0.5.0` promotes the true-scale 3D work from an instrumented lab into a 
 - a same-physics opponent that moves and contacts through its own actor and swept hand instead of teleporting the ball
 - Rookie, Regular, and Champion opponents whose explicit perception delay, noise, foot speed, recovery depth, and aggression profiles increase difficulty without changing the ball
 - a focused court-entry flow, progressive three-step contact tutorial, off-ball Set stance, live opponent scouting, and post-match contact statistics
+- three outcome-driven Wall School drills for clean contact, loaded pace, and spin control using the same physical result data as matches
 - emergent kill, roller, lob, hook, cut, and knuckle labels assigned after physical contact instead of selected as canned trajectories
 - perception-limited opponent reads sampled at profile-specific rates, perturbed with seeded noise, and projected forward through the same ballistics model
 - live contact explanations for clean spacing, jams, reaches, air swings, floor-before-wall downs, wall height, and first bounce
@@ -93,6 +94,7 @@ Current build includes:
 - `Shift`: hold a planted Set position while the opponent owns the touch
 - `R`: start the street match or next point
 - `F`: interrupt with a solo practice feed
+- `Wall School`: choose Clean, Pace, or Spin in the side panel to start a scored physical practice feed
 - `C`: cycle Tactical, Player, and Courtside cameras
 - `Backspace`: reset the match
 - `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
