@@ -15,6 +15,9 @@ const matchContent = read('src/game/match-content.js');
 const labHtml = read('lab.html');
 const labCss = read('lab.css');
 const labApp = read('src/labs/ball-lab.js');
+const interceptHtml = read('intercept.html');
+const interceptCss = read('intercept.css');
+const interceptApp = read('src/labs/intercept-lab.js');
 
 if (!html.includes('<script type="module" src="app.js"></script>')) {
   fail('The match entrypoint must load as an ES module.');
@@ -76,6 +79,41 @@ for (const path of labAssets) {
   }
 }
 
+const interceptIds = [...interceptHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+const duplicateInterceptIds = [
+  ...new Set(interceptIds.filter((id, index) => interceptIds.indexOf(id) !== index)),
+];
+if (duplicateInterceptIds.length) {
+  fail(`Duplicate Intercept Lab ids: ${duplicateInterceptIds.join(', ')}`);
+}
+
+const listedInterceptBindings = [
+  ...interceptApp.matchAll(/^\s{2}'([^']+)',$/gm),
+].map((match) => match[1]);
+const directInterceptBindings = [
+  ...interceptApp.matchAll(/document\.getElementById\(['"]([^'"]+)['"]\)/g),
+].map((match) => match[1]);
+const missingInterceptIds = [...new Set(
+  [...listedInterceptBindings, ...directInterceptBindings]
+    .filter((id) => !interceptIds.includes(id)),
+)];
+if (missingInterceptIds.length) {
+  fail(`Intercept Lab references missing HTML ids: ${missingInterceptIds.join(', ')}`);
+}
+
+const interceptAssets = [...interceptHtml.matchAll(/\s(?:href|src)="([^"]+)"/g)]
+  .map((match) => match[1])
+  .filter((path) => !/^(?:https?:|#|data:)/.test(path));
+for (const path of interceptAssets) {
+  const asset = resolve(root, path.replace(/^\.\//, ''));
+  if (!statSync(asset).isFile()) {
+    fail(`Missing local Intercept Lab asset: ${path}`);
+  }
+}
+if (!interceptApp.includes('ONE_WALL_HANDBALL.planIntercept')) {
+  fail('Intercept Lab must consume the handball SportPack planner rather than duplicate prediction logic.');
+}
+
 const requiredShots = ['palm', 'slice', 'fist', 'backhand', 'kill', 'roller', 'lob'];
 const markupShots = [...html.matchAll(/data-shot="([^"]+)"/g)].map((match) => match[1]);
 for (const shot of requiredShots) {
@@ -112,6 +150,9 @@ if (!labHtml.includes('id="matchResult" role="dialog" aria-modal="true"')) {
 if (!labCss.includes('body.is-playing.has-match-result .technique-deck')) {
   fail('Mobile match results must not be obscured by fixed contact controls.');
 }
+if (!interceptCss.includes('.dashboard')) {
+  fail('Intercept Lab layout styling is missing.');
+}
 
 for (const modulePath of [
   'src/game/match-app.js',
@@ -122,13 +163,25 @@ for (const modulePath of [
   'src/platform/gamepad.js',
   'src/presentation/court-projection.js',
   'src/sim/types.js',
+  'src/sim/contact-metrics.js',
   'src/sim/contact-outcome.js',
   'src/sim/court.js',
+  'src/sim/interception.js',
   'src/sim/random.js',
   'src/sim/replay.js',
   'src/sim/rules.js',
   'src/sim/ballistics.js',
+  'src/sim/trajectory.js',
+  'src/sim/striker-contact.js',
+  'src/sports/handball/intercept-planner.js',
+  'src/sports/handball/outcome-classifier.js',
+  'src/sports/handball/physics-profile.js',
+  'src/sports/handball/rules.js',
+  'src/sports/handball/sport-pack.js',
+  'src/sports/handball/striker-profile.js',
+  'src/sports/handball/surface-profiles.js',
   'src/labs/ball-lab.js',
+  'src/labs/intercept-lab.js',
   'src/styles/tokens.css',
   'vendor/three.core.min.js',
   'vendor/three.module.min.js',
@@ -141,5 +194,6 @@ for (const modulePath of [
 console.log(
   `Smoke check passed: ${htmlIds.length} unique ids, ${referencedIds.length} DOM bindings, `
     + `${requiredShots.length} shots, ${localAssets.length} match assets, `
-    + `${labIds.length} Accuracy Lab ids, ${labAssets.length} lab assets.`
+    + `${labIds.length} Accuracy Lab ids, ${labAssets.length} lab assets, `
+    + `${interceptIds.length} Intercept Lab ids, ${interceptAssets.length} intercept assets.`
 );

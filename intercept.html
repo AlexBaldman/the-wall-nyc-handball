@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111319">
+  <title>The Wall · Intercept Lab</title>
+  <link rel="stylesheet" href="intercept.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">The Wall · Movement R&amp;D</p>
+        <h1>Intercept Lab</h1>
+        <p class="lede">Tune footwork and preparation against the same ballistics and reachable-contact planner used by the game.</p>
+      </div>
+      <nav class="links" aria-label="Lab navigation">
+        <a href="lab.html">Street Match / Ball Lab</a>
+        <a href="index.html">2.5D Match</a>
+      </nav>
+    </header>
+
+    <section class="dashboard">
+      <aside class="controls" aria-label="Intercept controls">
+        <h2>Feed + player</h2>
+
+        <label>
+          <span>Player lateral</span>
+          <output id="playerXValue"></output>
+          <input id="playerX" type="range" min="-2.6" max="2.6" value="1.2" step="0.05">
+        </label>
+
+        <label>
+          <span>Player depth</span>
+          <output id="playerZValue"></output>
+          <input id="playerZ" type="range" min="3" max="9.8" value="6.2" step="0.05">
+        </label>
+
+        <label>
+          <span>Feed lateral</span>
+          <output id="ballXValue"></output>
+          <input id="ballX" type="range" min="-2.6" max="2.6" value="-0.4" step="0.05">
+        </label>
+
+        <label>
+          <span>Feed height</span>
+          <output id="ballYValue"></output>
+          <input id="ballY" type="range" min="0.35" max="1.7" value="1.05" step="0.05">
+        </label>
+
+        <label>
+          <span>Feed pace</span>
+          <output id="feedSpeedValue"></output>
+          <input id="feedSpeed" type="range" min="8" max="22" value="14" step="0.25">
+        </label>
+
+        <label class="toggle">
+          <input id="prepared" type="checkbox">
+          <span>Player is already preparing</span>
+        </label>
+
+        <button id="resetButton" type="button">Reset scenario</button>
+      </aside>
+
+      <section class="visual" aria-label="Predicted handball interception">
+        <div class="canvas-wrap">
+          <canvas id="courtCanvas" width="900" height="720" aria-label="Top-down court trajectory"></canvas>
+          <div class="legend" aria-hidden="true">
+            <span><i class="legend-ball"></i> trajectory</span>
+            <span><i class="legend-window"></i> reachable</span>
+            <span><i class="legend-contact"></i> recommended</span>
+            <span><i class="legend-player"></i> player</span>
+          </div>
+        </div>
+
+        <div class="readout-grid">
+          <article>
+            <span>Cue</span>
+            <strong id="cueValue">—</strong>
+          </article>
+          <article>
+            <span>Recommended contact</span>
+            <strong id="contactTimeValue">—</strong>
+          </article>
+          <article>
+            <span>Contact height</span>
+            <strong id="contactHeightValue">—</strong>
+          </article>
+          <article>
+            <span>Reach margin</span>
+            <strong id="reachMarginValue">—</strong>
+          </article>
+          <article>
+            <span>Reachable window</span>
+            <strong id="windowValue">—</strong>
+          </article>
+          <article>
+            <span>Wall return begins</span>
+            <strong id="returnValue">—</strong>
+          </article>
+        </div>
+
+        <div class="comparison">
+          <div>
+            <span>Free movement earliest</span>
+            <strong id="freeValue">—</strong>
+          </div>
+          <div>
+            <span>Prepared earliest</span>
+            <strong id="preparedValue">—</strong>
+          </div>
+          <p id="comparisonNote"></p>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      <p>Green samples are contacts the current movement model can physically reach. Gold is the planner’s preferred contact, balancing height, movement margin, and preparation time.</p>
+    </footer>
+  </main>
+
+  <script type="module" src="src/labs/intercept-lab.js"></script>
+</body>
+</html>
