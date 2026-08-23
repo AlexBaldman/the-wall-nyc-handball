@@ -19,11 +19,19 @@ const coach = await waitForCoach();
 let telemetry = ONE_WALL_HANDBALL.createCoachTelemetry();
 let lastSample = -Infinity;
 
+function summary() {
+  return ONE_WALL_HANDBALL.summarizeCoachTelemetry(telemetry);
+}
+
+function diagnostic() {
+  return ONE_WALL_HANDBALL.diagnoseCoachTelemetry(summary());
+}
+
 function sampleCoach() {
   const state = coach.getState();
   if (!state) return null;
   telemetry = ONE_WALL_HANDBALL.recordCoachTelemetry(telemetry, state);
-  return ONE_WALL_HANDBALL.summarizeCoachTelemetry(telemetry);
+  return summary();
 }
 
 function frame(timestamp) {
@@ -36,11 +44,12 @@ function frame(timestamp) {
 
 window.__THE_WALL_INTERCEPT_TELEMETRY__ = {
   getRaw: () => telemetry,
-  getSummary: () => ONE_WALL_HANDBALL.summarizeCoachTelemetry(telemetry),
+  getSummary: summary,
+  getDiagnostic: diagnostic,
   sample: sampleCoach,
   reset: () => {
     telemetry = ONE_WALL_HANDBALL.createCoachTelemetry();
-    return ONE_WALL_HANDBALL.summarizeCoachTelemetry(telemetry);
+    return summary();
   },
 };
 

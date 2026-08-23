@@ -25,6 +25,14 @@ assert.ok(
   telemetry.includes('ONE_WALL_HANDBALL.summarizeCoachTelemetry'),
   'Telemetry summaries must use the handball SportPack contract',
 );
+assert.ok(
+  telemetry.includes('ONE_WALL_HANDBALL.diagnoseCoachTelemetry'),
+  'Playtest diagnostics must derive from SportPack telemetry rather than direct game state',
+);
+assert.ok(
+  telemetry.includes('getDiagnostic: diagnostic'),
+  'Live playtesting API should expose the provisional coaching diagnostic',
+);
 assert.equal(telemetry.includes('stepBall('), false);
 assert.equal(telemetry.includes('awardRally('), false);
 assert.equal(telemetry.includes('__THE_WALL_LAB__'), false);
