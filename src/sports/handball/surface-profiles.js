@@ -4,18 +4,21 @@ export const HANDBALL_SURFACES = Object.freeze({
     kind: 'floor',
     restitution: 0.852,
     friction: 0.19,
+    metadata: Object.freeze({ crack: false }),
   }),
   wall: Object.freeze({
     id: 'handball-front-wall',
     kind: 'wall',
     restitution: 0.88,
     friction: 0.12,
+    metadata: Object.freeze({ crack: false }),
   }),
   crack: Object.freeze({
     id: 'handball-wall-floor-crack',
     kind: 'seam',
     restitution: 0.22,
     friction: 0.34,
+    metadata: Object.freeze({ crack: true }),
   }),
 });
 
