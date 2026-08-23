@@ -13,6 +13,11 @@ import {
   HANDBALL_PLAYER_MOVEMENT,
   planHandballIntercept,
 } from './intercept-planner.js';
+import {
+  createInterceptTelemetry,
+  recordInterceptTelemetry,
+  summarizeInterceptTelemetry,
+} from './intercept-telemetry.js';
 import { ONE_WALL_HANDBALL_PHYSICS } from './physics-profile.js';
 import { classifyHandballContact } from './outcome-classifier.js';
 import * as rules from './rules.js';
@@ -37,4 +42,7 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   guideFootwork: deriveHandballFootworkGuidance,
   createCueState: createCueStabilityState,
   stabilizeCue: advanceCueStability,
+  createCoachTelemetry: createInterceptTelemetry,
+  recordCoachTelemetry: recordInterceptTelemetry,
+  summarizeCoachTelemetry: summarizeInterceptTelemetry,
 });
