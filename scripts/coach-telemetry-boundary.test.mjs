@@ -30,8 +30,20 @@ assert.ok(
   'Playtest diagnostics must derive from SportPack telemetry rather than direct game state',
 );
 assert.ok(
+  telemetry.includes('ONE_WALL_HANDBALL.createCoachReport'),
+  'Exported coaching reports must use the SportPack report schema',
+);
+assert.ok(
   telemetry.includes('getDiagnostic: diagnostic'),
   'Live playtesting API should expose the provisional coaching diagnostic',
+);
+assert.ok(
+  telemetry.includes('getReport: report'),
+  'Live playtesting API should expose a portable coaching report',
+);
+assert.ok(
+  telemetry.includes('downloadReport'),
+  'Live telemetry observer should expose the report download action',
 );
 assert.equal(telemetry.includes('stepBall('), false);
 assert.equal(telemetry.includes('awardRally('), false);

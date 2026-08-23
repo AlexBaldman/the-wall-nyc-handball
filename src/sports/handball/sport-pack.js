@@ -17,6 +17,7 @@ import {
   HANDBALL_PLAYER_MOVEMENT,
   planHandballIntercept,
 } from './intercept-planner.js';
+import { createCoachPlaytestReport } from './intercept-report.js';
 import {
   createInterceptTelemetry,
   recordInterceptTelemetry,
@@ -29,6 +30,20 @@ import * as rules from './rules.js';
 function classifyContact(contact, actorPosition) {
   const metrics = deriveContactMetrics(contact, actorPosition);
   return classifyHandballContact(contact, metrics);
+}
+
+function createCoachReport({ generatedAt, summary, diagnostic } = {}) {
+  return createCoachPlaytestReport({
+    sport: {
+      id: 'american-handball-one-wall',
+      label: 'American One-Wall Handball',
+    },
+    physicsProfile: ONE_WALL_HANDBALL_PHYSICS,
+    generatedAt,
+    summary,
+    diagnostic,
+    thresholds: HANDBALL_COACH_DIAGNOSTIC_THRESHOLDS,
+  });
 }
 
 export const ONE_WALL_HANDBALL = Object.freeze({
@@ -51,4 +66,5 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   recordCoachTelemetry: recordInterceptTelemetry,
   summarizeCoachTelemetry: summarizeInterceptTelemetry,
   diagnoseCoachTelemetry: diagnoseInterceptTelemetry,
+  createCoachReport,
 });
