@@ -14,7 +14,9 @@ const app = read('src/game/match-app.js');
 const matchContent = read('src/game/match-content.js');
 const labHtml = read('lab.html');
 const labCss = read('lab.css');
+const labEntry = read('src/labs/ball-lab-entry.js');
 const labApp = read('src/labs/ball-lab.js');
+const interceptCoach = read('src/labs/intercept-coach.js');
 const interceptHtml = read('intercept.html');
 const interceptCss = read('intercept.css');
 const interceptApp = read('src/labs/intercept-lab.js');
@@ -77,6 +79,21 @@ for (const path of labAssets) {
   if (!statSync(asset).isFile()) {
     fail(`Missing local Accuracy Lab asset: ${path}`);
   }
+}
+if (!labHtml.includes('<script type="module" src="src/labs/ball-lab-entry.js"></script>')) {
+  fail('Street Match must compose through the thin Ball Lab entrypoint.');
+}
+if (
+  !labEntry.includes("import './ball-lab.js';")
+  || !labEntry.includes("import './intercept-coach.js';")
+) {
+  fail('Ball Lab entrypoint must compose the game and read-only intercept coach.');
+}
+if (!interceptCoach.includes('ONE_WALL_HANDBALL.planIntercept')) {
+  fail('Live intercept coach must consume the handball SportPack planner.');
+}
+if (interceptCoach.includes('stepBall(') || interceptCoach.includes('awardRally(')) {
+  fail('Live intercept coach must remain read-only and may not own physics or scoring.');
 }
 
 const interceptIds = [...interceptHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
@@ -180,7 +197,9 @@ for (const modulePath of [
   'src/sports/handball/sport-pack.js',
   'src/sports/handball/striker-profile.js',
   'src/sports/handball/surface-profiles.js',
+  'src/labs/ball-lab-entry.js',
   'src/labs/ball-lab.js',
+  'src/labs/intercept-coach.js',
   'src/labs/intercept-lab.js',
   'src/styles/tokens.css',
   'vendor/three.core.min.js',
