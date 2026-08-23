@@ -1,3 +1,9 @@
+import {
+  HANDBALL_CONTACT_ZONES,
+  HANDBALL_SURFACES,
+  resolveHandballSurface,
+} from './surface-profiles.js';
+
 const FOOT = 0.3048;
 const INCH = 0.0254;
 
@@ -25,13 +31,16 @@ export const BALL = Object.freeze({
   reboundMax: 52 * INCH,
 });
 
+// Compatibility view for code and tests that still consume the original
+// floor/wall/crack material fields. Canonical contact response now lives in
+// HANDBALL_SURFACES.
 export const MATERIAL = Object.freeze({
-  floorRestitution: 0.852,
-  wallRestitution: 0.88,
-  crackRestitution: 0.22,
-  floorFriction: 0.19,
-  wallFriction: 0.12,
-  crackFriction: 0.34,
+  floorRestitution: HANDBALL_SURFACES.floor.restitution,
+  wallRestitution: HANDBALL_SURFACES.wall.restitution,
+  crackRestitution: HANDBALL_SURFACES.crack.restitution,
+  floorFriction: HANDBALL_SURFACES.floor.friction,
+  wallFriction: HANDBALL_SURFACES.wall.friction,
+  crackFriction: HANDBALL_SURFACES.crack.friction,
 });
 
 export const PHYSICS = Object.freeze({
@@ -50,4 +59,7 @@ export const ONE_WALL_HANDBALL_PHYSICS = Object.freeze({
   court: COURT,
   material: MATERIAL,
   physics: PHYSICS,
+  surfaces: HANDBALL_SURFACES,
+  contactZones: HANDBALL_CONTACT_ZONES,
+  resolveSurface: resolveHandballSurface,
 });
