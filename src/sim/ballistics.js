@@ -1,14 +1,10 @@
-import { BALL, COURT, MATERIAL, PHYSICS, isInsideCourt } from './court.js';
+import { isInsideCourt } from './court.js';
 import { createContactRecord, vec3 } from './types.js';
+import { ONE_WALL_HANDBALL_PHYSICS } from '../sports/handball/physics-profile.js';
 
 const EPSILON = 1e-8;
 
-export const DEFAULT_PHYSICS_PROFILE = Object.freeze({
-  ball: BALL,
-  court: COURT,
-  material: MATERIAL,
-  physics: PHYSICS,
-});
+export const DEFAULT_PHYSICS_PROFILE = ONE_WALL_HANDBALL_PHYSICS;
 
 export function add(a, b) {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
@@ -49,10 +45,12 @@ function cloneVector(vector) {
 
 function profileParts(profile = DEFAULT_PHYSICS_PROFILE) {
   return {
-    ball: profile.ball ?? BALL,
-    court: profile.court ?? COURT,
-    material: profile.material ?? MATERIAL,
-    physics: profile.physics ?? PHYSICS,
+    ball: profile.ball ?? DEFAULT_PHYSICS_PROFILE.ball,
+    court: profile.court ?? DEFAULT_PHYSICS_PROFILE.court,
+    material: profile.material ?? DEFAULT_PHYSICS_PROFILE.material,
+    physics: profile.physics ?? DEFAULT_PHYSICS_PROFILE.physics,
+    surfaces: profile.surfaces ?? null,
+    resolveSurface: profile.resolveSurface ?? null,
   };
 }
 
@@ -94,7 +92,7 @@ function candidatePlaneHit(start, end, axis, plane, normal, kind) {
   return { time: Math.max(0, Math.min(1, time)), normal, kind };
 }
 
-function findEarliestEnvironmentHit(start, end, ballProfile = BALL) {
+function findEarliestEnvironmentHit(start, end, ballProfile) {
   const hits = [
     candidatePlaneHit(start, end, 'y', ballProfile.radius, { x: 0, y: 1, z: 0 }, 'floor'),
     candidatePlaneHit(start, end, 'z', ballProfile.radius, { x: 0, y: 0, z: 1 }, 'wall'),
@@ -104,12 +102,51 @@ function findEarliestEnvironmentHit(start, end, ballProfile = BALL) {
   return hits[0] ?? null;
 }
 
+function legacySurfaceForHit(hit, material, coefficients = {}) {
+  if (hit.kind === 'floor') {
+    return {
+      id: 'floor',
+      kind: 'floor',
+      restitution: coefficients.floorRestitution ?? material.floorRestitution,
+      friction: coefficients.floorFriction ?? material.floorFriction,
+      metadata: { crack: false },
+    };
+  }
+
+  return {
+    id: 'wall',
+    kind: 'wall',
+    restitution: coefficients.wallRestitution ?? material.wallRestitution,
+    friction: coefficients.wallFriction ?? material.wallFriction,
+    metadata: { crack: false },
+  };
+}
+
+function surfaceForHit({
+  hit,
+  position,
+  ballProfile,
+  material,
+  coefficients,
+  resolveSurface,
+}) {
+  const surface = resolveSurface
+    ? resolveSurface({ hit, position, ballProfile, coefficients })
+    : legacySurfaceForHit(hit, material, coefficients);
+
+  if (!surface || !Number.isFinite(surface.restitution) || !Number.isFinite(surface.friction)) {
+    throw new Error(`Invalid surface response for ${hit.kind}`);
+  }
+
+  return surface;
+}
+
 export function resolveStaticPlaneContact(
   ball,
   normal,
   restitution,
   friction,
-  ballProfile = BALL,
+  ballProfile = DEFAULT_PHYSICS_PROFILE.ball,
 ) {
   const incomingVelocity = cloneVector(ball.velocity);
   const incomingSpin = cloneVector(ball.angularVelocity);
@@ -208,26 +245,20 @@ export function stepBall(ball, seconds, context = {}) {
       }
     }
 
-    const isCrack = (
-      hit.kind === 'wall'
-      && ball.position.y <= ballProfile.radius * 1.7
-    );
-    const restitution = isCrack
-      ? material.crackRestitution
-      : hit.kind === 'floor'
-        ? (context.coefficients?.floorRestitution ?? material.floorRestitution)
-        : (context.coefficients?.wallRestitution ?? material.wallRestitution);
-    const friction = isCrack
-      ? material.crackFriction
-      : hit.kind === 'floor'
-        ? (context.coefficients?.floorFriction ?? material.floorFriction)
-        : (context.coefficients?.wallFriction ?? material.wallFriction);
+    const surface = surfaceForHit({
+      hit,
+      position: ball.position,
+      ballProfile,
+      material,
+      coefficients: context.coefficients,
+      resolveSurface: profile.resolveSurface,
+    });
 
     const incoming = resolveStaticPlaneContact(
       ball,
       hit.normal,
-      restitution,
-      friction,
+      surface.restitution,
+      surface.friction,
       ballProfile,
     );
     if (hit.kind === 'floor') ball.floorBounces += 1;
@@ -236,9 +267,11 @@ export function stepBall(ball, seconds, context = {}) {
       inBounds: hit.kind === 'floor'
         ? isInsideCourt(ball.position.x, ball.position.z, 0, court)
         : true,
-      crack: isCrack,
-      restitution,
-      friction,
+      surfaceId: surface.id ?? hit.kind,
+      surfaceKind: surface.kind ?? hit.kind,
+      ...(surface.metadata ?? {}),
+      restitution: surface.restitution,
+      friction: surface.friction,
     });
     events.push({ type: 'contact', contact: record });
     ball.position = add(ball.position, scale(hit.normal, 1e-5));
