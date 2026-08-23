@@ -5,6 +5,11 @@ const TECHNIQUE_LABELS = Object.freeze({
   fist: 'Fist',
 });
 
+function rounded(value, precision = 3) {
+  const scale = 10 ** precision;
+  return Math.round(value * scale) / scale;
+}
+
 function classifyShot(contact, metrics) {
   const modifiers = metrics.modifiers;
   const height = metrics.contactHeightMeters;
@@ -62,14 +67,14 @@ export function classifyHandballContact(contact, metrics) {
     },
     spacing: {
       ...spacing,
-      lateralMeters: metrics.lateralSpacingMeters,
+      lateralMeters: rounded(metrics.lateralSpacingMeters),
     },
     preparation: {
       ...preparation,
-      charge: metrics.preparationCharge,
+      charge: rounded(metrics.preparationCharge),
     },
-    paceMph: metrics.paceMph,
-    spinRpm: metrics.spinRpm,
-    handSpeedMps: metrics.strikerSpeedMps,
+    paceMph: rounded(metrics.paceMph),
+    spinRpm: Math.round(metrics.spinRpm),
+    handSpeedMps: rounded(metrics.strikerSpeedMps),
   };
 }
