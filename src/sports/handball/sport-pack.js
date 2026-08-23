@@ -4,6 +4,10 @@ import {
   planHandStartAssist,
 } from './hand-assist.js';
 import {
+  diagnoseInterceptTelemetry,
+  HANDBALL_COACH_DIAGNOSTIC_THRESHOLDS,
+} from './intercept-diagnostics.js';
+import {
   advanceCueStability,
   createCueStabilityState,
   deriveHandballFootworkGuidance,
@@ -35,6 +39,7 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   movement: HANDBALL_PLAYER_MOVEMENT,
   contactEnvelope: HANDBALL_CONTACT_ENVELOPE,
   handAssist: HANDBALL_HAND_ASSIST,
+  coachDiagnostics: HANDBALL_COACH_DIAGNOSTIC_THRESHOLDS,
   deriveContactMetrics,
   classifyContact,
   planIntercept: planHandballIntercept,
@@ -45,4 +50,5 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   createCoachTelemetry: createInterceptTelemetry,
   recordCoachTelemetry: recordInterceptTelemetry,
   summarizeCoachTelemetry: summarizeInterceptTelemetry,
+  diagnoseCoachTelemetry: diagnoseInterceptTelemetry,
 });
