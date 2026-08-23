@@ -5,6 +5,7 @@ import {
   HANDBALL_PLAYER_MOVEMENT,
   planHandballIntercept,
 } from '../src/sports/handball/intercept-planner.js';
+import { ONE_WALL_HANDBALL } from '../src/sports/handball/sport-pack.js';
 
 const returningFeed = createBallState({
   active: true,
@@ -38,6 +39,21 @@ assert.ok(
   'Recommended contacts must stay inside the handball contact-height envelope',
 );
 assert.ok(['move', 'prepare', 'strike'].includes(freePlan.cue));
+
+const sportPackPlan = ONE_WALL_HANDBALL.planIntercept({
+  ball: returningFeed,
+  player,
+  preparing: false,
+  horizon: 1.2,
+  coefficients: noGravity,
+});
+assert.equal(ONE_WALL_HANDBALL.movement, HANDBALL_PLAYER_MOVEMENT);
+assert.equal(ONE_WALL_HANDBALL.contactEnvelope, HANDBALL_CONTACT_ENVELOPE);
+assert.deepEqual(
+  sportPackPlan.recommended.position,
+  freePlan.recommended.position,
+  'SportPack intercept planning should resolve through the handball-owned planner',
+);
 
 const preparedPlan = planHandballIntercept({
   ball: returningFeed,
