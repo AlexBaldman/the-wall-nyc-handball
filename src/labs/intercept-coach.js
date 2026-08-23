@@ -1,6 +1,7 @@
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
 
 const UPDATE_INTERVAL_MS = 100;
+const RADAR = Object.freeze({ width: 92, height: 120, padding: 7 });
 
 const COPY = Object.freeze({
   recover: Object.freeze({ label: 'RECOVER', detail: 'Get behind the next return before loading the hand.' }),
@@ -34,7 +35,7 @@ function createCoachUi() {
       right: 16px;
       bottom: 76px;
       z-index: 18;
-      width: min(316px, calc(100% - 32px));
+      width: min(332px, calc(100% - 32px));
       padding: 11px 12px;
       border: 1px solid rgba(185, 255, 102, 0.27);
       border-radius: 14px;
@@ -58,7 +59,7 @@ function createCoachUi() {
       align-items: baseline;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .intercept-coach__topline span {
       color: rgba(255,255,255,0.52);
@@ -71,6 +72,12 @@ function createCoachUi() {
       font: 650 10px/1.1 "Space Grotesk", system-ui, sans-serif;
       text-decoration: none;
       pointer-events: auto;
+    }
+    .intercept-coach__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      align-items: center;
+      gap: 10px;
     }
     .intercept-coach strong {
       display: block;
@@ -100,13 +107,23 @@ function createCoachUi() {
       color: rgba(185,255,102,0.82);
       font: 650 10px/1.1 "Space Grotesk", system-ui, sans-serif;
     }
+    .intercept-coach__radar {
+      display: block;
+      width: 82px;
+      height: 106px;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.025);
+    }
     @media (max-width: 620px) {
       .intercept-coach {
         right: 10px;
         bottom: 144px;
-        width: min(270px, calc(100% - 20px));
+        width: min(286px, calc(100% - 20px));
         padding: 9px 10px;
       }
+      .intercept-coach__body { grid-template-columns: minmax(0, 1fr) 66px; gap: 8px; }
+      .intercept-coach__radar { width: 66px; height: 86px; }
       .intercept-coach strong { font-size: 19px; }
       .intercept-coach small { font-size: 10px; }
       .intercept-coach__footwork { font-size: 10px; }
@@ -126,10 +143,15 @@ function createCoachUi() {
       <span>Reachable contact</span>
       <a href="intercept.html">Tune ↗</a>
     </div>
-    <strong>READ</strong>
-    <div class="intercept-coach__footwork"></div>
-    <small>Watch the return.</small>
-    <div class="intercept-coach__metrics" aria-hidden="true"></div>
+    <div class="intercept-coach__body">
+      <div>
+        <strong>READ</strong>
+        <div class="intercept-coach__footwork"></div>
+        <small>Watch the return.</small>
+        <div class="intercept-coach__metrics" aria-hidden="true"></div>
+      </div>
+      <canvas class="intercept-coach__radar" width="${RADAR.width}" height="${RADAR.height}" aria-hidden="true"></canvas>
+    </div>
   `;
   viewport.append(element);
 
@@ -139,6 +161,7 @@ function createCoachUi() {
     footwork: element.querySelector('.intercept-coach__footwork'),
     detail: element.querySelector('small'),
     metrics: element.querySelector('.intercept-coach__metrics'),
+    radar: element.querySelector('.intercept-coach__radar'),
   };
 }
 
@@ -168,6 +191,93 @@ function formatFootwork(guidance) {
   if (!guidance?.available) return '';
   if (guidance.label === 'SET') return 'SET YOUR FEET';
   return `${guidance.label} · ${guidance.movementDistanceMeters.toFixed(2)} m`;
+}
+
+function radarPoint(position) {
+  const court = ONE_WALL_HANDBALL.physics.court;
+  const xRatio = Math.max(0, Math.min(1, ((position?.x ?? 0) + court.halfWidth) / (court.halfWidth * 2)));
+  const zRatio = Math.max(0, Math.min(1, (position?.z ?? 0) / court.longLine));
+  return {
+    x: RADAR.padding + xRatio * (RADAR.width - RADAR.padding * 2),
+    y: RADAR.padding + zRatio * (RADAR.height - RADAR.padding * 2),
+  };
+}
+
+function drawDot(context, point, radius, fillStyle, strokeStyle = null) {
+  context.beginPath();
+  context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  context.fillStyle = fillStyle;
+  context.fill();
+  if (strokeStyle) {
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = 1;
+    context.stroke();
+  }
+}
+
+function renderRadar(canvas, state) {
+  if (!canvas) return;
+  const context = canvas.getContext('2d');
+  if (!context) return;
+  const court = ONE_WALL_HANDBALL.physics.court;
+  context.clearRect(0, 0, RADAR.width, RADAR.height);
+
+  context.strokeStyle = 'rgba(255,255,255,0.18)';
+  context.lineWidth = 1;
+  context.strokeRect(
+    RADAR.padding,
+    RADAR.padding,
+    RADAR.width - RADAR.padding * 2,
+    RADAR.height - RADAR.padding * 2,
+  );
+
+  const lineY = (z) => radarPoint({ x: 0, z }).y;
+  context.beginPath();
+  context.moveTo(RADAR.padding, RADAR.padding);
+  context.lineTo(RADAR.width - RADAR.padding, RADAR.padding);
+  context.strokeStyle = 'rgba(255,159,50,0.9)';
+  context.lineWidth = 2;
+  context.stroke();
+
+  for (const z of [court.shortLine, court.serviceMarkers, court.longLine]) {
+    context.beginPath();
+    context.moveTo(RADAR.padding, lineY(z));
+    context.lineTo(RADAR.width - RADAR.padding, lineY(z));
+    context.strokeStyle = z === court.longLine
+      ? 'rgba(255,255,255,0.28)'
+      : 'rgba(255,255,255,0.11)';
+    context.lineWidth = 1;
+    context.stroke();
+  }
+
+  if (!state.visible) return;
+  const playerPoint = radarPoint(state.playerPosition);
+  const ballPoint = radarPoint(state.ballPosition);
+  const contactPoint = state.plan.recommended?.position
+    ? radarPoint(state.plan.recommended.position)
+    : null;
+  const targetPoint = state.footwork.targetPosition
+    ? radarPoint(state.footwork.targetPosition)
+    : null;
+
+  if (targetPoint) {
+    context.beginPath();
+    context.moveTo(playerPoint.x, playerPoint.y);
+    context.lineTo(targetPoint.x, targetPoint.y);
+    context.strokeStyle = 'rgba(185,255,102,0.65)';
+    context.lineWidth = 1.5;
+    context.setLineDash([3, 2]);
+    context.stroke();
+    context.setLineDash([]);
+    context.strokeStyle = 'rgba(185,255,102,0.9)';
+    context.strokeRect(targetPoint.x - 3, targetPoint.y - 3, 6, 6);
+  }
+
+  if (contactPoint) {
+    drawDot(context, contactPoint, 3.4, 'rgba(255,209,102,0.18)', 'rgba(255,209,102,0.95)');
+  }
+  drawDot(context, ballPoint, 2.1, 'rgba(245,247,250,0.94)');
+  drawDot(context, playerPoint, 3.1, 'rgba(110,231,242,0.95)');
 }
 
 function shouldShowCoach(api, snapshot) {
@@ -209,6 +319,8 @@ function coachState(api, previousCueState) {
     cue: cueState.displayCue ?? plan.cue,
     cueState,
     footwork,
+    playerPosition: Object.freeze({ ...snapshot.player.position }),
+    ballPosition: Object.freeze({ ...snapshot.ball.position }),
     plan,
   });
 }
@@ -216,6 +328,7 @@ function coachState(api, previousCueState) {
 function renderCoach(ui, state) {
   if (!ui) return;
   ui.element.classList.toggle('is-visible', state.visible);
+  renderRadar(ui.radar, state);
   if (!state.visible) return;
 
   const copy = COPY[state.cue] ?? COPY.recover;
