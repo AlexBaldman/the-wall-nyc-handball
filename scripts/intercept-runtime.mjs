@@ -26,14 +26,49 @@ try {
   }));
   assert.deepEqual(canvasSize, { width: 900, height: 720 });
 
+  const experimentOptions = await page.locator('#movementExperiment option').evaluateAll(
+    (options) => options.map((option) => option.value),
+  );
+  assert.deepEqual(
+    experimentOptions,
+    ['canonical', 'responsive', 'deliberate', 'prepared-relief'],
+    'Intercept Lab should expose the deliberate movement experiment set',
+  );
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getExperiment()),
+    'canonical',
+  );
+  assert.match(await page.locator('#profileValue').innerText(), /handball-free/i);
+
   assert.match(await page.locator('#cueValue').innerText(), /MOVE|PREPARE|HOLD|STRIKE|RECOVER/i);
   assert.notEqual(await page.locator('#windowValue').innerText(), '—');
   assert.notEqual(await page.locator('#freeValue').innerText(), '—');
 
+  await page.selectOption('#movementExperiment', 'prepared-relief');
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getExperiment()),
+    'prepared-relief',
+  );
+  assert.match(
+    await page.locator('#movementExperimentNote').innerText(),
+    /reducing only the locomotion penalty/i,
+  );
+  assert.match(
+    await page.locator('#profileValue').innerText(),
+    /handball-free/i,
+    'Prepared-relief experiment must leave free movement canonical',
+  );
+
   const initialPrepared = await page.locator('#preparedValue').innerText();
   await page.locator('#prepared').check();
   assert.equal(await page.locator('#prepared').isChecked(), true);
-  assert.equal(await page.locator('#preparedValue').innerText(), initialPrepared);
+  assert.notEqual(await page.locator('#preparedValue').innerText(), '—');
+  assert.match(
+    await page.locator('#profileValue').innerText(),
+    /experiment-prepared-relief/i,
+    'Prepared-relief profile should activate only after entering the prepared state',
+  );
+  assert.ok(initialPrepared.length > 0);
 
   await page.locator('#playerX').fill('2.4');
   assert.equal(await page.locator('#playerXValue').innerText(), '2.40 m');
@@ -42,6 +77,8 @@ try {
   await page.click('#resetButton');
   assert.equal(await page.locator('#playerXValue').innerText(), '1.20 m');
   assert.equal(await page.locator('#prepared').isChecked(), false);
+  assert.equal(await page.locator('#movementExperiment').inputValue(), 'canonical');
+  assert.match(await page.locator('#profileValue').innerText(), /handball-free/i);
 
   const links = await page.locator('.links a').evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute('href')),
@@ -71,6 +108,7 @@ try {
     canvasSize,
     cue: await page.locator('#cueValue').innerText(),
     window: await page.locator('#windowValue').innerText(),
+    experimentOptions,
     errors,
     failedRequests,
   }, null, 2));
