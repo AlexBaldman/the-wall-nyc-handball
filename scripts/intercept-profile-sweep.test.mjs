@@ -6,6 +6,22 @@ import {
 } from '../src/sports/handball/intercept-profile-sweep.js';
 import { HANDBALL_PLAYER_MOVEMENT } from '../src/sports/handball/intercept-planner.js';
 
+function assertIdentityDelta(result, delta) {
+  assert.equal(delta.reachableChanged, false);
+  for (const [resultKey, deltaKey] of [
+    ['earliestTime', 'earliestTimeSeconds'],
+    ['recommendedTime', 'recommendedTimeSeconds'],
+    ['reachMarginMeters', 'reachMarginMeters'],
+    ['movementDemandMeters', 'movementDemandMeters'],
+  ]) {
+    assert.equal(
+      delta[deltaKey],
+      Number.isFinite(result[resultKey]) ? 0 : null,
+      `Canonical ${deltaKey} should be zero only when the underlying measurement exists`,
+    );
+  }
+}
+
 const sweep = runHandballMovementProfileSweep();
 assert.equal(sweep.schemaVersion, 1);
 assert.equal(sweep.baselineId, 'canonical');
@@ -16,12 +32,7 @@ assert.deepEqual(
 
 for (const scenario of Object.values(sweep.experiments.canonical.scenarios)) {
   for (const state of ['free', 'prepared']) {
-    const delta = scenario[state].delta;
-    assert.equal(delta.reachableChanged, false);
-    assert.equal(delta.earliestTimeSeconds, 0);
-    assert.equal(delta.recommendedTimeSeconds, 0);
-    assert.equal(delta.reachMarginMeters, 0);
-    assert.equal(delta.movementDemandMeters, 0);
+    assertIdentityDelta(scenario[state].result, scenario[state].delta);
   }
 }
 
@@ -52,9 +63,10 @@ assert.strictEqual(
   HANDBALL_PLAYER_MOVEMENT.free,
   'Prepared-relief experiment must leave free movement canonical',
 );
-const reliefCenterFree = relief.scenarios['center-return'].free;
-assert.equal(reliefCenterFree.delta.earliestTimeSeconds, 0);
-assert.equal(reliefCenterFree.delta.reachMarginMeters, 0);
+assertIdentityDelta(
+  relief.scenarios['center-return'].free.result,
+  relief.scenarios['center-return'].free.delta,
+);
 
 assert.equal(HANDBALL_PLAYER_MOVEMENT.free.maxSpeed, 3.95);
 assert.equal(HANDBALL_PLAYER_MOVEMENT.prepared.maxSpeed, 2.25);
