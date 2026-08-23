@@ -3,6 +3,13 @@ import { createContactRecord, vec3 } from './types.js';
 
 const EPSILON = 1e-8;
 
+export const DEFAULT_PHYSICS_PROFILE = Object.freeze({
+  ball: BALL,
+  court: COURT,
+  material: MATERIAL,
+  physics: PHYSICS,
+});
+
 export function add(a, b) {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
@@ -40,23 +47,33 @@ function cloneVector(vector) {
   return { x: vector.x, y: vector.y, z: vector.z };
 }
 
-export function accelerationFor(ball, coefficients = {}) {
-  const gravity = coefficients.gravity ?? PHYSICS.gravity;
+function profileParts(profile = DEFAULT_PHYSICS_PROFILE) {
+  return {
+    ball: profile.ball ?? BALL,
+    court: profile.court ?? COURT,
+    material: profile.material ?? MATERIAL,
+    physics: profile.physics ?? PHYSICS,
+  };
+}
+
+export function accelerationFor(ball, coefficients = {}, profile = DEFAULT_PHYSICS_PROFILE) {
+  const { ball: ballProfile, physics } = profileParts(profile);
+  const gravity = coefficients.gravity ?? physics.gravity;
   const dragScale = coefficients.dragScale ?? 1;
   const magnusScale = coefficients.magnusScale ?? 1;
   const speed = magnitude(ball.velocity);
-  const area = Math.PI * BALL.radius * BALL.radius;
+  const area = Math.PI * ballProfile.radius * ballProfile.radius;
   const dragK = (
     0.5
-    * PHYSICS.airDensity
-    * PHYSICS.dragCoefficient
+    * physics.airDensity
+    * physics.dragCoefficient
     * area
-    / BALL.mass
+    / ballProfile.mass
   ) * dragScale;
   const drag = scale(ball.velocity, -dragK * speed);
   const magnus = scale(
     cross(ball.angularVelocity, ball.velocity),
-    PHYSICS.magnusCoefficient * magnusScale,
+    physics.magnusCoefficient * magnusScale,
   );
 
   return {
@@ -77,10 +94,10 @@ function candidatePlaneHit(start, end, axis, plane, normal, kind) {
   return { time: Math.max(0, Math.min(1, time)), normal, kind };
 }
 
-function findEarliestEnvironmentHit(start, end) {
+function findEarliestEnvironmentHit(start, end, ballProfile = BALL) {
   const hits = [
-    candidatePlaneHit(start, end, 'y', BALL.radius, { x: 0, y: 1, z: 0 }, 'floor'),
-    candidatePlaneHit(start, end, 'z', BALL.radius, { x: 0, y: 0, z: 1 }, 'wall'),
+    candidatePlaneHit(start, end, 'y', ballProfile.radius, { x: 0, y: 1, z: 0 }, 'floor'),
+    candidatePlaneHit(start, end, 'z', ballProfile.radius, { x: 0, y: 0, z: 1 }, 'wall'),
   ].filter(Boolean);
 
   hits.sort((a, b) => a.time - b.time || (a.kind === 'wall' ? -1 : 1));
@@ -92,6 +109,7 @@ export function resolveStaticPlaneContact(
   normal,
   restitution,
   friction,
+  ballProfile = BALL,
 ) {
   const incomingVelocity = cloneVector(ball.velocity);
   const incomingSpin = cloneVector(ball.angularVelocity);
@@ -105,14 +123,14 @@ export function resolveStaticPlaneContact(
     scale(normal, -(1 + restitution) * normalSpeed),
   );
 
-  const contactOffset = scale(normal, -BALL.radius);
+  const contactOffset = scale(normal, -ballProfile.radius);
   const surfaceVelocity = add(ball.velocity, cross(ball.angularVelocity, contactOffset));
   const tangentVelocity = subtract(surfaceVelocity, scale(normal, dot(surfaceVelocity, normal)));
   const tangentDelta = scale(tangentVelocity, -Math.max(0, Math.min(1, friction)));
   ball.velocity = add(ball.velocity, tangentDelta);
 
-  const inertia = 0.4 * BALL.mass * BALL.radius * BALL.radius;
-  const tangentImpulse = scale(tangentDelta, BALL.mass);
+  const inertia = 0.4 * ballProfile.mass * ballProfile.radius * ballProfile.radius;
+  const tangentImpulse = scale(tangentDelta, ballProfile.mass);
   ball.angularVelocity = add(
     ball.angularVelocity,
     scale(cross(contactOffset, tangentImpulse), 1 / inertia),
@@ -147,17 +165,22 @@ function createEnvironmentRecord(ball, context, hit, incoming, metadata = {}) {
 export function stepBall(ball, seconds, context = {}) {
   if (!ball.active || seconds <= 0) return [];
 
+  const profile = profileParts(context.profile);
+  const ballProfile = profile.ball;
+  const court = profile.court;
+  const material = profile.material;
+  const physics = profile.physics;
   const events = [];
   ball.previousPosition = cloneVector(ball.position);
   let remaining = seconds;
 
-  for (let iteration = 0; iteration < PHYSICS.maxCollisionIterations && remaining > EPSILON; iteration += 1) {
-    const acceleration = accelerationFor(ball, context.coefficients);
+  for (let iteration = 0; iteration < physics.maxCollisionIterations && remaining > EPSILON; iteration += 1) {
+    const acceleration = accelerationFor(ball, context.coefficients, profile);
     const end = add(
       ball.position,
       add(scale(ball.velocity, remaining), scale(acceleration, 0.5 * remaining * remaining)),
     );
-    const hit = findEarliestEnvironmentHit(ball.position, end);
+    const hit = findEarliestEnvironmentHit(ball.position, end, ballProfile);
 
     if (!hit) {
       integrateSegment(ball, remaining, acceleration);
@@ -171,8 +194,8 @@ export function stepBall(ball, seconds, context = {}) {
 
     if (hit.kind === 'wall') {
       const wallLive = (
-        Math.abs(ball.position.x) <= COURT.halfWidth - BALL.radius
-        && ball.position.y <= COURT.wallHeight - BALL.radius
+        Math.abs(ball.position.x) <= court.halfWidth - ballProfile.radius
+        && ball.position.y <= court.wallHeight - ballProfile.radius
       );
       if (!wallLive) {
         events.push({
@@ -187,25 +210,31 @@ export function stepBall(ball, seconds, context = {}) {
 
     const isCrack = (
       hit.kind === 'wall'
-      && ball.position.y <= BALL.radius * 1.7
+      && ball.position.y <= ballProfile.radius * 1.7
     );
     const restitution = isCrack
-      ? MATERIAL.crackRestitution
+      ? material.crackRestitution
       : hit.kind === 'floor'
-        ? (context.coefficients?.floorRestitution ?? MATERIAL.floorRestitution)
-        : (context.coefficients?.wallRestitution ?? MATERIAL.wallRestitution);
+        ? (context.coefficients?.floorRestitution ?? material.floorRestitution)
+        : (context.coefficients?.wallRestitution ?? material.wallRestitution);
     const friction = isCrack
-      ? MATERIAL.crackFriction
+      ? material.crackFriction
       : hit.kind === 'floor'
-        ? (context.coefficients?.floorFriction ?? MATERIAL.floorFriction)
-        : (context.coefficients?.wallFriction ?? MATERIAL.wallFriction);
+        ? (context.coefficients?.floorFriction ?? material.floorFriction)
+        : (context.coefficients?.wallFriction ?? material.wallFriction);
 
-    const incoming = resolveStaticPlaneContact(ball, hit.normal, restitution, friction);
+    const incoming = resolveStaticPlaneContact(
+      ball,
+      hit.normal,
+      restitution,
+      friction,
+      ballProfile,
+    );
     if (hit.kind === 'floor') ball.floorBounces += 1;
     if (hit.kind === 'wall') ball.wallContacts += 1;
     const record = createEnvironmentRecord(ball, context, hit, incoming, {
       inBounds: hit.kind === 'floor'
-        ? isInsideCourt(ball.position.x, ball.position.z)
+        ? isInsideCourt(ball.position.x, ball.position.z, 0, court)
         : true,
       crack: isCrack,
       restitution,
@@ -216,7 +245,7 @@ export function stepBall(ball, seconds, context = {}) {
     remaining = Math.max(0, remaining - 1e-6);
   }
 
-  if (ball.position.y < BALL.radius) ball.position.y = BALL.radius;
+  if (ball.position.y < ballProfile.radius) ball.position.y = ballProfile.radius;
   return events;
 }
 
@@ -251,10 +280,11 @@ export function sweepMovingSpheres(
 }
 
 export function resolveHandContact(ball, hand, context = {}) {
+  const { ball: ballProfile } = profileParts(context.profile);
   const time = sweepMovingSpheres(
     ball.previousPosition,
     ball.position,
-    BALL.radius,
+    ballProfile.radius,
     hand.previousPosition,
     hand.position,
     hand.radius,
@@ -325,11 +355,18 @@ export function resolveHandContact(ball, hand, context = {}) {
 }
 
 export function calculateDropReboundHeight({
-  dropHeight = BALL.officialDropHeight,
-  restitution = MATERIAL.floorRestitution,
-  gravity = PHYSICS.gravity,
+  profile = DEFAULT_PHYSICS_PROFILE,
+  dropHeight,
+  restitution,
+  gravity,
 } = {}) {
-  const impactSpeed = Math.sqrt(2 * gravity * Math.max(0, dropHeight - BALL.radius));
-  const reboundSpeed = impactSpeed * restitution;
-  return BALL.radius + (reboundSpeed * reboundSpeed) / (2 * gravity);
+  const parts = profileParts(profile);
+  const resolvedDropHeight = dropHeight ?? parts.ball.officialDropHeight;
+  const resolvedRestitution = restitution ?? parts.material.floorRestitution;
+  const resolvedGravity = gravity ?? parts.physics.gravity;
+  const impactSpeed = Math.sqrt(
+    2 * resolvedGravity * Math.max(0, resolvedDropHeight - parts.ball.radius),
+  );
+  const reboundSpeed = impactSpeed * resolvedRestitution;
+  return parts.ball.radius + (reboundSpeed * reboundSpeed) / (2 * resolvedGravity);
 }
