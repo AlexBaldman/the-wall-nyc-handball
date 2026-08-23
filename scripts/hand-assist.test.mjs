@@ -3,6 +3,7 @@ import {
   HANDBALL_HAND_ASSIST,
   planHandStartAssist,
 } from '../src/sports/handball/hand-assist.js';
+import { ONE_WALL_HANDBALL } from '../src/sports/handball/sport-pack.js';
 
 const preparedStart = Object.freeze({ x: 0, y: 1, z: 4 });
 const wallTarget = Object.freeze({ x: 0.6, y: 0.55, z: 0 });
@@ -49,6 +50,19 @@ assert.ok(
   'Assist must respect the existing depth hand-start clamp',
 );
 assert.ok(assisted.direction.z < 0, 'A normal return should still swing toward the front wall');
+
+assert.equal(ONE_WALL_HANDBALL.handAssist, HANDBALL_HAND_ASSIST);
+const sportPackAssist = ONE_WALL_HANDBALL.planHandStart({
+  interceptPlan: plan,
+  preparedStart,
+  wallTarget,
+  desiredContactTime: 0.12,
+});
+assert.deepEqual(
+  sportPackAssist,
+  assisted,
+  'SportPack should expose the same planner-backed hand assist result',
+);
 
 const stalePlan = Object.freeze({
   reachable: true,
