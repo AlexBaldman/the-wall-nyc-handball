@@ -105,6 +105,15 @@ if (
 ) {
   fail('Handball SportPack must expose its coaching guidance verbs.');
 }
+if (!labApp.includes("import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';")) {
+  fail('Street Match must import the handball SportPack for player contact planning.');
+}
+if (!labApp.includes('ONE_WALL_HANDBALL.planHandStart')) {
+  fail('Street Match hand-start assist must consume the handball SportPack planner.');
+}
+if (!labApp.includes('const start = handAssist.assisted ? handAssist.start : preparedStart;')) {
+  fail('Street Match hand-start assist must preserve the prepared-start fallback.');
+}
 if (interceptCoach.includes('stepBall(') || interceptCoach.includes('awardRally(')) {
   fail('Live intercept coach must remain read-only and may not own physics or scoring.');
 }
