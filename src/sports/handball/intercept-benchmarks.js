@@ -87,6 +87,7 @@ export function runHandballInterceptBenchmark(scenario, overrides = {}) {
     preparing: overrides.preparing ?? scenario.preparing,
     horizon: overrides.horizon ?? scenario.horizon,
     coefficients: overrides.coefficients,
+    movementProfile: overrides.movementProfile,
   });
   const guidance = deriveHandballFootworkGuidance(plan, player.position);
 
@@ -94,6 +95,7 @@ export function runHandballInterceptBenchmark(scenario, overrides = {}) {
     id: scenario.id,
     label: scenario.label,
     preparing: overrides.preparing ?? scenario.preparing,
+    movementProfile: plan.movementProfile,
     reachable: plan.reachable,
     cue: plan.cue,
     returnStartTime: plan.returnStartTime,
