@@ -13,7 +13,7 @@ const returningFeed = createBallState({
   angularVelocity: { x: 0, y: 0, z: 0 },
 });
 const player = {
-  position: { x: 2.4, y: 0, z: 4 },
+  position: { x: 2, y: 0, z: 4 },
   velocity: { x: 0, y: 0, z: 0 },
 };
 const noGravity = {
