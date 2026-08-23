@@ -23,6 +23,7 @@
     "test:rules-ownership": "node scripts/rules-ownership.test.mjs",
     "test:handball-intercept": "node scripts/handball-intercept-planner.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
+    "test:intercept-runtime": "node scripts/intercept-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "site:stage": "node scripts/stage-site.mjs",
     "serve": "python3 -m http.server 4173 --bind 127.0.0.1"
