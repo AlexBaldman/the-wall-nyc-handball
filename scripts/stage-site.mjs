@@ -14,6 +14,8 @@ const files = [
   'app.js',
   'lab.html',
   'lab.css',
+  'intercept.html',
+  'intercept.css',
   'outputs/the-wall-gameplay-final-clean.png',
 ];
 const directories = ['src', 'vendor'];
