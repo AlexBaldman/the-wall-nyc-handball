@@ -10,7 +10,7 @@
   "packageManager": "npm@10.9.8",
   "scripts": {
     "test": "npm run check",
-    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:smoke",
+    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:handball-intercept && npm run test:smoke",
     "test:syntax": "node scripts/syntax.test.mjs",
     "test:architecture": "node scripts/architecture.test.mjs",
     "test:vendor": "node scripts/vendor.test.mjs",
@@ -21,6 +21,7 @@
     "test:trajectory": "node scripts/trajectory.test.mjs",
     "test:interception": "node scripts/interception.test.mjs",
     "test:rules-ownership": "node scripts/rules-ownership.test.mjs",
+    "test:handball-intercept": "node scripts/handball-intercept-planner.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "site:stage": "node scripts/stage-site.mjs",

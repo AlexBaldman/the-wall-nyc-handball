@@ -34,19 +34,59 @@ export function reachableTravelDistance({
   return accelerationDistance + topSpeed * (availableTime - timeToTopSpeed);
 }
 
+export function reachableTravelDistanceExponential({
+  time,
+  reactionTime = 0,
+  initialSpeed = 0,
+  maxSpeed,
+  responseRate,
+} = {}) {
+  const availableTime = Math.max(
+    0,
+    finiteNonNegative(time) - finiteNonNegative(reactionTime),
+  );
+  const topSpeed = finiteNonNegative(maxSpeed);
+  const rate = finiteNonNegative(responseRate);
+  const startingSpeed = Math.min(topSpeed, finiteNonNegative(initialSpeed));
+
+  if (availableTime === 0 || topSpeed === 0) return 0;
+  if (rate === 0 || startingSpeed >= topSpeed) {
+    return startingSpeed * availableTime;
+  }
+
+  return (
+    topSpeed * availableTime
+    + (startingSpeed - topSpeed) * (1 - Math.exp(-rate * availableTime)) / rate
+  );
+}
+
 function horizontalDistance(a = {}, b = {}) {
   return Math.hypot((a.x ?? 0) - (b.x ?? 0), (a.z ?? 0) - (b.z ?? 0));
 }
 
-function candidateForSample(sample, options) {
-  const centerDistance = horizontalDistance(options.actorPosition, sample.position);
-  const movementBudget = reachableTravelDistance({
-    time: sample.time,
+function movementBudgetAtTime(time, options) {
+  if (options.responseRate > 0) {
+    return reachableTravelDistanceExponential({
+      time,
+      reactionTime: options.reactionTime,
+      initialSpeed: options.initialSpeed,
+      maxSpeed: options.maxSpeed,
+      responseRate: options.responseRate,
+    });
+  }
+
+  return reachableTravelDistance({
+    time,
     reactionTime: options.reactionTime,
     initialSpeed: options.initialSpeed,
     maxSpeed: options.maxSpeed,
     acceleration: options.acceleration,
   });
+}
+
+function candidateForSample(sample, options) {
+  const centerDistance = horizontalDistance(options.actorPosition, sample.position);
+  const movementBudget = movementBudgetAtTime(sample.time, options);
   const requiredTravel = Math.max(0, centerDistance - options.reachRadius);
   const margin = movementBudget - requiredTravel;
 
@@ -68,6 +108,7 @@ export function findReachableInterceptWindow(trajectory, {
   initialSpeed = 0,
   maxSpeed = 0,
   acceleration = 0,
+  responseRate = 0,
   reachRadius = 0,
   minHeight = -Infinity,
   maxHeight = Infinity,
@@ -80,6 +121,7 @@ export function findReachableInterceptWindow(trajectory, {
     initialSpeed: finiteNonNegative(initialSpeed),
     maxSpeed: finiteNonNegative(maxSpeed),
     acceleration: finiteNonNegative(acceleration),
+    responseRate: finiteNonNegative(responseRate),
     reachRadius: finiteNonNegative(reachRadius),
   };
   const candidates = [];

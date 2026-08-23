@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   findReachableInterceptWindow,
   reachableTravelDistance,
+  reachableTravelDistanceExponential,
 } from '../src/sim/interception.js';
 
 function near(actual, expected, tolerance, message) {
@@ -43,6 +44,30 @@ near(
   'Reaction delay should reduce movement time before interception',
 );
 
+const exponentialExpected = 4 * 0.5 - 4 * (1 - Math.exp(-22 * 0.5)) / 22;
+near(
+  reachableTravelDistanceExponential({
+    time: 0.5,
+    maxSpeed: 4,
+    responseRate: 22,
+  }),
+  exponentialExpected,
+  1e-12,
+  'Exponential reach should match the continuous form of the live velocity response',
+);
+assert.ok(
+  reachableTravelDistanceExponential({
+    time: 0.5,
+    maxSpeed: 4,
+    responseRate: 22,
+  }) > reachableTravelDistance({
+    time: 0.5,
+    maxSpeed: 4,
+    acceleration: 8,
+  }),
+  'Fast exponential response should produce a distinct movement budget from linear acceleration',
+);
+
 const sample = (time, x, y, z) => Object.freeze({
   time,
   active: true,
@@ -73,6 +98,20 @@ assert.equal(window.earliest.time, 0.75, 'Too-early and too-high samples should 
 assert.equal(window.latest.time, 1);
 assert.ok(window.best.reachMarginMeters >= 0);
 assert.equal(window.candidates.length, 2);
+
+const exponentialWindow = findReachableInterceptWindow(trajectory, {
+  actorPosition: { x: 0, y: 0, z: 0 },
+  maxSpeed: 4,
+  responseRate: 22,
+  reachRadius: 0.2,
+  minHeight: 0.4,
+  maxHeight: 1.8,
+});
+assert.equal(exponentialWindow.reachable, true);
+assert.ok(
+  exponentialWindow.earliest.time <= window.earliest.time,
+  'A faster exponential response should not produce a later first reachable contact',
+);
 
 const delayedWindow = findReachableInterceptWindow(trajectory, {
   actorPosition: { x: 0, y: 0, z: 0 },
