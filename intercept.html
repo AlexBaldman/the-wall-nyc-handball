@@ -25,6 +25,12 @@
       <aside class="controls" aria-label="Intercept controls">
         <h2>Feed + player</h2>
 
+        <label class="profile-control">
+          <span>Movement experiment</span>
+          <select id="movementExperiment" aria-label="Movement experiment"></select>
+          <small id="movementExperimentNote">Current live values.</small>
+        </label>
+
         <label>
           <span>Player lateral</span>
           <output id="playerXValue"></output>
@@ -80,6 +86,10 @@
             <strong id="cueValue">—</strong>
           </article>
           <article>
+            <span>Movement profile</span>
+            <strong id="profileValue">—</strong>
+          </article>
+          <article>
             <span>Recommended contact</span>
             <strong id="contactTimeValue">—</strong>
           </article>
@@ -116,7 +126,7 @@
     </section>
 
     <footer>
-      <p>Green samples are contacts the current movement model can physically reach. Gold is the planner’s preferred contact, balancing height, movement margin, and preparation time.</p>
+      <p>Green samples are contacts the selected movement experiment can physically reach. Gold is the planner’s preferred contact, balancing height, movement margin, and preparation time. Experiments affect this lab only; the Street Match stays on canonical movement.</p>
     </footer>
   </main>
 

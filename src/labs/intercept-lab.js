@@ -1,4 +1,5 @@
 import { createBallState } from '../sim/types.js';
+import { HANDBALL_MOVEMENT_EXPERIMENTS } from '../sports/handball/intercept-profile-sweep.js';
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
 
 const { court } = ONE_WALL_HANDBALL.physics;
@@ -7,6 +8,8 @@ const canvas = document.getElementById('courtCanvas');
 const context = canvas.getContext('2d');
 
 const ui = Object.fromEntries([
+  'movementExperiment',
+  'movementExperimentNote',
   'playerX',
   'playerXValue',
   'playerZ',
@@ -20,6 +23,7 @@ const ui = Object.fromEntries([
   'prepared',
   'resetButton',
   'cueValue',
+  'profileValue',
   'contactTimeValue',
   'contactHeightValue',
   'reachMarginValue',
@@ -31,6 +35,7 @@ const ui = Object.fromEntries([
 ].map((id) => [id, document.getElementById(id)]));
 
 const DEFAULTS = Object.freeze({
+  movementExperiment: 'canonical',
   playerX: 1.2,
   playerZ: 6.2,
   ballX: -0.4,
@@ -46,6 +51,22 @@ const VIEW = Object.freeze({
   top: 58,
   bottom: 662,
 });
+
+function installMovementExperiments() {
+  for (const candidate of Object.values(HANDBALL_MOVEMENT_EXPERIMENTS)) {
+    const option = document.createElement('option');
+    option.value = candidate.id;
+    option.textContent = candidate.label;
+    ui.movementExperiment.append(option);
+  }
+  ui.movementExperiment.value = DEFAULTS.movementExperiment;
+}
+
+function activeMovementExperiment() {
+  return Object.values(HANDBALL_MOVEMENT_EXPERIMENTS).find(
+    (candidate) => candidate.id === ui.movementExperiment.value,
+  ) ?? HANDBALL_MOVEMENT_EXPERIMENTS.canonical;
+}
 
 function numericInput(input) {
   return Number.parseFloat(input.value);
@@ -78,12 +99,13 @@ function scenario() {
   };
 }
 
-function planFor(preparing, source = scenario()) {
+function planFor(preparing, source = scenario(), candidate = activeMovementExperiment()) {
   return ONE_WALL_HANDBALL.planIntercept({
     ball: source.ball,
     player: source.player,
     preparing,
     horizon: 1.8,
+    movementProfile: preparing ? candidate.prepared : candidate.free,
   });
 }
 
@@ -243,7 +265,12 @@ function formatSeconds(value) {
   return Number.isFinite(value) ? `${value.toFixed(2)} s` : '—';
 }
 
-function syncControls() {
+function formatProfile(profile) {
+  return `${profile.id} · ${profile.maxSpeed.toFixed(2)} m/s · response ${profile.responseRate.toFixed(1)}`;
+}
+
+function syncControls(candidate) {
+  ui.movementExperimentNote.textContent = candidate.note;
   ui.playerXValue.textContent = `${numericInput(ui.playerX).toFixed(2)} m`;
   ui.playerZValue.textContent = `${numericInput(ui.playerZ).toFixed(2)} m`;
   ui.ballXValue.textContent = `${numericInput(ui.ballX).toFixed(2)} m`;
@@ -254,6 +281,7 @@ function syncControls() {
 function syncReadout(selectedPlan, freePlan, preparedPlan) {
   const recommended = selectedPlan.recommended;
   ui.cueValue.textContent = selectedPlan.cue;
+  ui.profileValue.textContent = formatProfile(selectedPlan.movementProfile);
   ui.contactTimeValue.textContent = recommended ? formatSeconds(recommended.time) : 'unreachable';
   ui.contactHeightValue.textContent = recommended
     ? `${recommended.position.y.toFixed(2)} m`
@@ -275,20 +303,21 @@ function syncReadout(selectedPlan, freePlan, preparedPlan) {
   if (freePlan.window?.reachable && preparedPlan.window?.reachable) {
     const delta = preparedPlan.window.earliest.time - freePlan.window.earliest.time;
     ui.comparisonNote.textContent = delta > 0.015
-      ? `Preparing here costs about ${delta.toFixed(2)} s of earliest reach. Arrive first, then load the swing.`
-      : 'This feed is already close enough that preparation does not meaningfully delay the first reachable contact.';
+      ? `Within this experiment, preparing here costs about ${delta.toFixed(2)} s of earliest reach. Arrive first, then load the swing.`
+      : 'Within this experiment, the feed is already close enough that preparation does not meaningfully delay the first reachable contact.';
   } else if (freePlan.window?.reachable && !preparedPlan.window?.reachable) {
-    ui.comparisonNote.textContent = 'Free movement can save this ball; preparing too early removes the reachable window.';
+    ui.comparisonNote.textContent = 'Within this experiment, free movement can save this ball; preparing too early removes the reachable window.';
   } else {
-    ui.comparisonNote.textContent = 'Move the player or change the feed until a playable return window appears.';
+    ui.comparisonNote.textContent = 'Move the player or change the feed until this movement experiment produces a playable return window.';
   }
 }
 
 function render() {
-  syncControls();
+  const candidate = activeMovementExperiment();
+  syncControls(candidate);
   const source = scenario();
-  const freePlan = planFor(false, source);
-  const preparedPlan = planFor(true, source);
+  const freePlan = planFor(false, source, candidate);
+  const preparedPlan = planFor(true, source, candidate);
   const selectedPlan = ui.prepared.checked ? preparedPlan : freePlan;
 
   clearCanvas();
@@ -302,6 +331,7 @@ function render() {
 }
 
 function reset() {
+  ui.movementExperiment.value = DEFAULTS.movementExperiment;
   ui.playerX.value = DEFAULTS.playerX;
   ui.playerZ.value = DEFAULTS.playerZ;
   ui.ballX.value = DEFAULTS.ballX;
@@ -311,7 +341,10 @@ function reset() {
   render();
 }
 
+installMovementExperiments();
+
 for (const input of [
+  ui.movementExperiment,
   ui.playerX,
   ui.playerZ,
   ui.ballX,
@@ -323,5 +356,16 @@ for (const input of [
   input.addEventListener('change', render);
 }
 ui.resetButton.addEventListener('click', reset);
+
+window.__THE_WALL_INTERCEPT_LAB__ = {
+  getExperiment: () => activeMovementExperiment().id,
+  getSelectedMovementProfile: () => (
+    ui.prepared.checked
+      ? activeMovementExperiment().prepared
+      : activeMovementExperiment().free
+  ),
+  render,
+  reset,
+};
 
 render();
