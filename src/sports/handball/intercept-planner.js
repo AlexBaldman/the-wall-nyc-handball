@@ -4,10 +4,12 @@ import { ONE_WALL_HANDBALL_PHYSICS } from './physics-profile.js';
 
 export const HANDBALL_PLAYER_MOVEMENT = Object.freeze({
   free: Object.freeze({
+    id: 'handball-free',
     maxSpeed: 3.95,
     responseRate: 22,
   }),
   prepared: Object.freeze({
+    id: 'handball-prepared',
     maxSpeed: 2.25,
     responseRate: 15,
   }),
@@ -24,6 +26,24 @@ export const HANDBALL_CONTACT_ENVELOPE = Object.freeze({
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
+}
+
+function finiteNonNegative(value, fallback) {
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+export function resolveHandballMovementProfile(preparing = false, override = null) {
+  const canonical = preparing
+    ? HANDBALL_PLAYER_MOVEMENT.prepared
+    : HANDBALL_PLAYER_MOVEMENT.free;
+
+  if (!override) return canonical;
+
+  return Object.freeze({
+    id: String(override.id ?? `${canonical.id}-override`),
+    maxSpeed: finiteNonNegative(override.maxSpeed, canonical.maxSpeed),
+    responseRate: finiteNonNegative(override.responseRate, canonical.responseRate),
+  });
 }
 
 function firstReturnTime(trajectory, ballState) {
@@ -85,7 +105,10 @@ export function planHandballIntercept({
   coefficients = {},
   physicsProfile = ONE_WALL_HANDBALL_PHYSICS,
   envelope = HANDBALL_CONTACT_ENVELOPE,
+  movementProfile = null,
 } = {}) {
+  const movement = resolveHandballMovementProfile(preparing, movementProfile);
+
   if (!ball?.active) {
     return Object.freeze({
       reachable: false,
@@ -94,6 +117,7 @@ export function planHandballIntercept({
       trajectory: null,
       window: null,
       recommended: null,
+      movementProfile: movement,
     });
   }
 
@@ -111,12 +135,10 @@ export function planHandballIntercept({
       trajectory,
       window: null,
       recommended: null,
+      movementProfile: movement,
     });
   }
 
-  const movement = preparing
-    ? HANDBALL_PLAYER_MOVEMENT.prepared
-    : HANDBALL_PLAYER_MOVEMENT.free;
   const playerVelocity = player?.velocity ?? { x: 0, z: 0 };
   const initialSpeed = Math.hypot(playerVelocity.x ?? 0, playerVelocity.z ?? 0);
   const window = findReachableInterceptWindow(trajectory, {
@@ -141,5 +163,6 @@ export function planHandballIntercept({
     trajectory,
     window,
     recommended,
+    movementProfile: movement,
   });
 }
