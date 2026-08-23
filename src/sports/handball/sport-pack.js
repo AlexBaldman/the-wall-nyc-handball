@@ -4,6 +4,11 @@ import {
   planHandStartAssist,
 } from './hand-assist.js';
 import {
+  advanceCueStability,
+  createCueStabilityState,
+  deriveHandballFootworkGuidance,
+} from './intercept-guidance.js';
+import {
   HANDBALL_CONTACT_ENVELOPE,
   HANDBALL_PLAYER_MOVEMENT,
   planHandballIntercept,
@@ -29,4 +34,7 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   classifyContact,
   planIntercept: planHandballIntercept,
   planHandStart: planHandStartAssist,
+  guideFootwork: deriveHandballFootworkGuidance,
+  createCueState: createCueStabilityState,
+  stabilizeCue: advanceCueStability,
 });

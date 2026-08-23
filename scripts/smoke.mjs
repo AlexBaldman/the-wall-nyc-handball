@@ -20,6 +20,7 @@ const interceptCoach = read('src/labs/intercept-coach.js');
 const interceptHtml = read('intercept.html');
 const interceptCss = read('intercept.css');
 const interceptApp = read('src/labs/intercept-lab.js');
+const handballSportPack = read('src/sports/handball/sport-pack.js');
 
 if (!html.includes('<script type="module" src="app.js"></script>')) {
   fail('The match entrypoint must load as an ES module.');
@@ -91,6 +92,18 @@ if (
 }
 if (!interceptCoach.includes('ONE_WALL_HANDBALL.planIntercept')) {
   fail('Live intercept coach must consume the handball SportPack planner.');
+}
+if (
+  !interceptCoach.includes('ONE_WALL_HANDBALL.guideFootwork')
+  || !interceptCoach.includes('ONE_WALL_HANDBALL.stabilizeCue')
+) {
+  fail('Live intercept coach must consume SportPack footwork guidance and cue stability.');
+}
+if (
+  !handballSportPack.includes('guideFootwork: deriveHandballFootworkGuidance')
+  || !handballSportPack.includes('stabilizeCue: advanceCueStability')
+) {
+  fail('Handball SportPack must expose its coaching guidance verbs.');
 }
 if (interceptCoach.includes('stepBall(') || interceptCoach.includes('awardRally(')) {
   fail('Live intercept coach must remain read-only and may not own physics or scoring.');
@@ -190,6 +203,8 @@ for (const modulePath of [
   'src/sim/ballistics.js',
   'src/sim/trajectory.js',
   'src/sim/striker-contact.js',
+  'src/sports/handball/hand-assist.js',
+  'src/sports/handball/intercept-guidance.js',
   'src/sports/handball/intercept-planner.js',
   'src/sports/handball/outcome-classifier.js',
   'src/sports/handball/physics-profile.js',

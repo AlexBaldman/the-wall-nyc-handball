@@ -10,7 +10,7 @@
   "packageManager": "npm@10.9.8",
   "scripts": {
     "test": "npm run check",
-    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:handball-intercept && npm run test:hand-assist && npm run test:smoke",
+    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:handball-intercept && npm run test:hand-assist && npm run test:intercept-guidance && npm run test:smoke",
     "test:syntax": "node scripts/syntax.test.mjs",
     "test:architecture": "node scripts/architecture.test.mjs",
     "test:vendor": "node scripts/vendor.test.mjs",
@@ -23,6 +23,7 @@
     "test:rules-ownership": "node scripts/rules-ownership.test.mjs",
     "test:handball-intercept": "node scripts/handball-intercept-planner.test.mjs",
     "test:hand-assist": "node scripts/hand-assist.test.mjs",
+    "test:intercept-guidance": "node scripts/intercept-guidance.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
     "test:intercept-runtime": "node scripts/intercept-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",

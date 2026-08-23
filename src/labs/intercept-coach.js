@@ -34,11 +34,11 @@ function createCoachUi() {
       right: 16px;
       bottom: 76px;
       z-index: 18;
-      width: min(300px, calc(100% - 32px));
+      width: min(316px, calc(100% - 32px));
       padding: 11px 12px;
       border: 1px solid rgba(185, 255, 102, 0.27);
       border-radius: 14px;
-      background: rgba(5, 8, 14, 0.82);
+      background: rgba(5, 8, 14, 0.84);
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
       backdrop-filter: blur(10px);
       pointer-events: none;
@@ -78,6 +78,14 @@ function createCoachUi() {
       font: 900 22px/0.95 "Barlow Condensed", system-ui, sans-serif;
       letter-spacing: 0.04em;
     }
+    .intercept-coach__footwork {
+      min-height: 13px;
+      margin-top: 5px;
+      color: rgba(185,255,102,0.94);
+      font: 800 11px/1.15 "Space Grotesk", system-ui, sans-serif;
+      letter-spacing: 0.055em;
+      text-transform: uppercase;
+    }
     .intercept-coach small {
       display: block;
       margin-top: 5px;
@@ -96,11 +104,12 @@ function createCoachUi() {
       .intercept-coach {
         right: 10px;
         bottom: 144px;
-        width: min(260px, calc(100% - 20px));
+        width: min(270px, calc(100% - 20px));
         padding: 9px 10px;
       }
       .intercept-coach strong { font-size: 19px; }
       .intercept-coach small { font-size: 10px; }
+      .intercept-coach__footwork { font-size: 10px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .intercept-coach { transition: none; }
@@ -118,6 +127,7 @@ function createCoachUi() {
       <a href="intercept.html">Tune ↗</a>
     </div>
     <strong>READ</strong>
+    <div class="intercept-coach__footwork"></div>
     <small>Watch the return.</small>
     <div class="intercept-coach__metrics" aria-hidden="true"></div>
   `;
@@ -126,6 +136,7 @@ function createCoachUi() {
   return {
     element,
     label: element.querySelector('strong'),
+    footwork: element.querySelector('.intercept-coach__footwork'),
     detail: element.querySelector('small'),
     metrics: element.querySelector('.intercept-coach__metrics'),
   };
@@ -153,6 +164,12 @@ function formatMetrics(plan) {
   return `<span>${eta}</span><span>${height}</span><span>${margin}</span>`;
 }
 
+function formatFootwork(guidance) {
+  if (!guidance?.available) return '';
+  if (guidance.label === 'SET') return 'SET YOUR FEET';
+  return `${guidance.label} · ${guidance.movementDistanceMeters.toFixed(2)} m`;
+}
+
 function shouldShowCoach(api, snapshot) {
   const entry = document.getElementById('courtEntry');
   if (entry && !entry.classList.contains('is-hidden')) return false;
@@ -165,7 +182,7 @@ function shouldShowCoach(api, snapshot) {
   return true;
 }
 
-function coachState(api) {
+function coachState(api, previousCueState) {
   const snapshot = api.getSnapshot();
   const preparing = (snapshot.player?.preparation ?? 0) > 0.01;
   const plan = ONE_WALL_HANDBALL.planIntercept({
@@ -174,11 +191,24 @@ function coachState(api) {
     preparing,
     coefficients: currentPhysicsCoefficients(),
   });
+  const visible = shouldShowCoach(api, snapshot);
+  const cueState = ONE_WALL_HANDBALL.stabilizeCue(
+    previousCueState,
+    plan.cue,
+    { visible },
+  );
+  const footwork = ONE_WALL_HANDBALL.guideFootwork(
+    plan,
+    snapshot.player?.position,
+  );
 
   return Object.freeze({
-    visible: shouldShowCoach(api, snapshot),
+    visible,
     preparing,
-    cue: plan.cue,
+    rawCue: plan.cue,
+    cue: cueState.displayCue ?? plan.cue,
+    cueState,
+    footwork,
     plan,
   });
 }
@@ -191,6 +221,7 @@ function renderCoach(ui, state) {
   const copy = COPY[state.cue] ?? COPY.recover;
   ui.element.dataset.cue = state.cue;
   ui.label.textContent = copy.label;
+  ui.footwork.textContent = formatFootwork(state.footwork);
   ui.detail.textContent = state.plan.recommended
     ? copy.detail
     : 'No clean contact window yet. Recover toward the return.';
@@ -202,10 +233,15 @@ const ui = createCoachUi();
 let lastUpdate = -Infinity;
 let latestState = null;
 
+function updateCoach() {
+  latestState = coachState(api, latestState?.cueState);
+  renderCoach(ui, latestState);
+  return latestState;
+}
+
 function frame(timestamp) {
   if (timestamp - lastUpdate >= UPDATE_INTERVAL_MS) {
-    latestState = coachState(api);
-    renderCoach(ui, latestState);
+    updateCoach();
     lastUpdate = timestamp;
   }
   window.requestAnimationFrame(frame);
@@ -213,11 +249,7 @@ function frame(timestamp) {
 
 window.__THE_WALL_INTERCEPT_COACH__ = {
   getState: () => latestState,
-  update: () => {
-    latestState = coachState(api);
-    renderCoach(ui, latestState);
-    return latestState;
-  },
+  update: updateCoach,
 };
 
 window.requestAnimationFrame(frame);
