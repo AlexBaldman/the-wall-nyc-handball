@@ -10,7 +10,7 @@
   "packageManager": "npm@10.9.8",
   "scripts": {
     "test": "npm run check",
-    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:handball-intercept && npm run test:hand-assist && npm run test:intercept-guidance && npm run test:coach-presentation && npm run test:intercept-telemetry && npm run test:intercept-diagnostics && npm run test:intercept-report && npm run test:coach-telemetry-boundary && npm run test:intercept-benchmarks && npm run test:intercept-profile-overrides && npm run test:intercept-profile-sweep && npm run test:intercept-lab-profile-boundary && npm run test:mvp-first-run && npm run test:mvp-point-flow && npm run test:mvp-front-door && npm run test:smoke",
+    "check": "npm run test:syntax && npm run test:architecture && npm run test:vendor && npm run test:physics && npm run test:profiles && npm run test:striker && npm run test:contacts && npm run test:trajectory && npm run test:interception && npm run test:rules-ownership && npm run test:handball-intercept && npm run test:hand-assist && npm run test:intercept-guidance && npm run test:coach-presentation && npm run test:intercept-telemetry && npm run test:intercept-diagnostics && npm run test:intercept-report && npm run test:coach-telemetry-boundary && npm run test:intercept-benchmarks && npm run test:intercept-profile-overrides && npm run test:intercept-profile-sweep && npm run test:intercept-lab-profile-boundary && npm run test:mvp-first-run && npm run test:mvp-point-flow && npm run test:mvp-front-door && npm run test:rookie-rally-profile && npm run test:smoke",
     "test:syntax": "node scripts/syntax.test.mjs",
     "test:architecture": "node scripts/architecture.test.mjs",
     "test:vendor": "node scripts/vendor.test.mjs",
@@ -36,6 +36,7 @@
     "test:mvp-first-run": "node scripts/mvp-first-run.test.mjs",
     "test:mvp-point-flow": "node scripts/mvp-point-flow.test.mjs",
     "test:mvp-front-door": "node scripts/mvp-front-door.test.mjs",
+    "test:rookie-rally-profile": "node scripts/rookie-rally-profile.test.mjs",
     "test:lab-runtime": "node scripts/lab-runtime.mjs",
     "test:intercept-runtime": "node scripts/intercept-runtime.mjs",
     "test:smoke": "node scripts/smoke.mjs",
