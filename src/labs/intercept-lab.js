@@ -1,4 +1,10 @@
 import { createBallState } from '../sim/types.js';
+import {
+  benchmarkScenario,
+  getInterceptLabPreset,
+  INTERCEPT_LAB_PRESETS,
+  presetControlValues,
+} from './intercept-lab-presets.js';
 import { HANDBALL_MOVEMENT_EXPERIMENTS } from '../sports/handball/intercept-profile-sweep.js';
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
 
@@ -8,6 +14,8 @@ const canvas = document.getElementById('courtCanvas');
 const context = canvas.getContext('2d');
 
 const ui = Object.fromEntries([
+  'scenarioPreset',
+  'presetState',
   'movementExperiment',
   'movementExperimentNote',
   'playerX',
@@ -35,6 +43,7 @@ const ui = Object.fromEntries([
 ].map((id) => [id, document.getElementById(id)]));
 
 const DEFAULTS = Object.freeze({
+  scenarioPreset: 'custom',
   movementExperiment: 'canonical',
   playerX: 1.2,
   playerZ: 6.2,
@@ -43,6 +52,9 @@ const DEFAULTS = Object.freeze({
   feedSpeed: 14,
   prepared: false,
 });
+
+let selectedPresetId = DEFAULTS.scenarioPreset;
+let selectedPresetScenario = null;
 
 const FEED_DEPTH = Math.max(2.8, court.shortLine - 1.4);
 const VIEW = Object.freeze({
@@ -62,6 +74,16 @@ function installMovementExperiments() {
   ui.movementExperiment.value = DEFAULTS.movementExperiment;
 }
 
+function installScenarioPresets() {
+  for (const preset of Object.values(INTERCEPT_LAB_PRESETS)) {
+    const option = document.createElement('option');
+    option.value = preset.id;
+    option.textContent = preset.label;
+    ui.scenarioPreset.append(option);
+  }
+  ui.scenarioPreset.value = DEFAULTS.scenarioPreset;
+}
+
 function activeMovementExperiment() {
   return Object.values(HANDBALL_MOVEMENT_EXPERIMENTS).find(
     (candidate) => candidate.id === ui.movementExperiment.value,
@@ -73,6 +95,13 @@ function numericInput(input) {
 }
 
 function scenario() {
+  if (selectedPresetScenario) {
+    return {
+      player: selectedPresetScenario.player,
+      ball: createBallState(selectedPresetScenario.ball),
+      horizon: selectedPresetScenario.horizon,
+    };
+  }
   return {
     player: {
       position: {
@@ -96,7 +125,35 @@ function scenario() {
       },
       angularVelocity: { x: -16, y: 0, z: 0 },
     }),
+    horizon: 1.8,
   };
+}
+
+function formatVector(vector) {
+  return `(${vector.x.toFixed(2)}, ${vector.y.toFixed(2)}, ${vector.z.toFixed(2)})`;
+}
+
+function markScenarioCustom() {
+  if (selectedPresetId === 'custom') return;
+  selectedPresetId = 'custom';
+  selectedPresetScenario = null;
+  ui.scenarioPreset.value = 'custom';
+}
+
+function loadScenarioPreset(id) {
+  const preset = getInterceptLabPreset(id);
+  selectedPresetId = preset.id;
+  selectedPresetScenario = benchmarkScenario(preset);
+  const values = presetControlValues(preset);
+  if (values) {
+    ui.playerX.value = values.playerX;
+    ui.playerZ.value = values.playerZ;
+    ui.ballX.value = values.ballX;
+    ui.ballY.value = values.ballY;
+    ui.feedSpeed.value = Math.abs(selectedPresetScenario.ball.velocity.z);
+    ui.prepared.checked = values.prepared;
+  }
+  ui.scenarioPreset.value = selectedPresetId;
 }
 
 function planFor(preparing, source = scenario(), candidate = activeMovementExperiment()) {
@@ -104,7 +161,7 @@ function planFor(preparing, source = scenario(), candidate = activeMovementExper
     ball: source.ball,
     player: source.player,
     preparing,
-    horizon: 1.8,
+    horizon: source.horizon,
     movementProfile: preparing ? candidate.prepared : candidate.free,
   });
 }
@@ -276,6 +333,10 @@ function syncControls(candidate) {
   ui.ballXValue.textContent = `${numericInput(ui.ballX).toFixed(2)} m`;
   ui.ballYValue.textContent = `${numericInput(ui.ballY).toFixed(2)} m`;
   ui.feedSpeedValue.textContent = `${numericInput(ui.feedSpeed).toFixed(2)} m/s`;
+  const preset = getInterceptLabPreset(selectedPresetId);
+  ui.presetState.textContent = selectedPresetScenario
+    ? `${preset.label} · ${preset.id} · exact benchmark · horizon ${selectedPresetScenario.horizon.toFixed(2)} s · ${selectedPresetScenario.preparing ? 'preparing' : 'free'}`
+    : 'Custom · manual scenario controls';
 }
 
 function syncReadout(selectedPlan, freePlan, preparedPlan) {
@@ -299,6 +360,17 @@ function syncReadout(selectedPlan, freePlan, preparedPlan) {
   ui.preparedValue.textContent = preparedPlan.window?.reachable
     ? formatSeconds(preparedPlan.window.earliest.time)
     : 'none';
+
+  if (selectedPresetScenario) {
+    ui.presetState.title = [
+      `ball position ${formatVector(selectedPresetScenario.ball.position)}`,
+      `velocity ${formatVector(selectedPresetScenario.ball.velocity)}`,
+      `spin ${formatVector(selectedPresetScenario.ball.angularVelocity)}`,
+      `player ${formatVector(selectedPresetScenario.player.position)}`,
+    ].join(' · ');
+  } else {
+    ui.presetState.removeAttribute('title');
+  }
 
   if (freePlan.window?.reachable && preparedPlan.window?.reachable) {
     const delta = preparedPlan.window.earliest.time - freePlan.window.earliest.time;
@@ -331,6 +403,9 @@ function render() {
 }
 
 function reset() {
+  selectedPresetId = 'custom';
+  selectedPresetScenario = null;
+  ui.scenarioPreset.value = DEFAULTS.scenarioPreset;
   ui.movementExperiment.value = DEFAULTS.movementExperiment;
   ui.playerX.value = DEFAULTS.playerX;
   ui.playerZ.value = DEFAULTS.playerZ;
@@ -342,9 +417,14 @@ function reset() {
 }
 
 installMovementExperiments();
+installScenarioPresets();
+
+ui.scenarioPreset.addEventListener('change', () => {
+  loadScenarioPreset(ui.scenarioPreset.value);
+  render();
+});
 
 for (const input of [
-  ui.movementExperiment,
   ui.playerX,
   ui.playerZ,
   ui.ballX,
@@ -352,13 +432,25 @@ for (const input of [
   ui.feedSpeed,
   ui.prepared,
 ]) {
-  input.addEventListener('input', render);
-  input.addEventListener('change', render);
+  input.addEventListener('input', () => { markScenarioCustom(); render(); });
+  input.addEventListener('change', () => { markScenarioCustom(); render(); });
 }
+ui.movementExperiment.addEventListener('input', render);
+ui.movementExperiment.addEventListener('change', render);
 ui.resetButton.addEventListener('click', reset);
 
 window.__THE_WALL_INTERCEPT_LAB__ = {
   getExperiment: () => activeMovementExperiment().id,
+  getPreset: () => selectedPresetId,
+  getPresetState: () => selectedPresetScenario
+    ? {
+        id: selectedPresetId,
+        horizon: selectedPresetScenario.horizon,
+        preparing: selectedPresetScenario.preparing,
+        ball: selectedPresetScenario.ball,
+        player: selectedPresetScenario.player,
+      }
+    : { id: 'custom' },
   getSelectedMovementProfile: () => (
     ui.prepared.checked
       ? activeMovementExperiment().prepared

@@ -29,6 +29,14 @@ try {
   const experimentOptions = await page.locator('#movementExperiment option').evaluateAll(
     (options) => options.map((option) => option.value),
   );
+  const presetOptions = await page.locator('#scenarioPreset option').evaluateAll(
+    (options) => options.map((option) => option.value),
+  );
+  assert.deepEqual(
+    presetOptions,
+    ['custom', 'center-return', 'wall-bound', 'wide-return'],
+    'Intercept Lab should expose the canonical scenario presets',
+  );
   assert.deepEqual(
     experimentOptions,
     ['canonical', 'responsive', 'deliberate', 'prepared-relief'],
@@ -38,11 +46,37 @@ try {
     await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getExperiment()),
     'canonical',
   );
+  assert.equal(await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getPreset()), 'custom');
   assert.match(await page.locator('#profileValue').innerText(), /handball-free/i);
 
   assert.match(await page.locator('#cueValue').innerText(), /MOVE|PREPARE|HOLD|STRIKE|RECOVER/i);
   assert.notEqual(await page.locator('#windowValue').innerText(), '—');
   assert.notEqual(await page.locator('#freeValue').innerText(), '—');
+
+  await page.selectOption('#scenarioPreset', 'wide-return');
+  const widePreset = await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getPresetState());
+  assert.deepEqual(widePreset, {
+    id: 'wide-return',
+    horizon: 1.15,
+    preparing: false,
+    ball: {
+      active: true,
+      position: { x: -1.35, y: 1.05, z: 3 },
+      velocity: { x: 0.2, y: 0.75, z: 7.2 },
+      angularVelocity: { x: -24, y: 5, z: 0 },
+    },
+    player: {
+      position: { x: 1, y: 0, z: 5.4 },
+      velocity: { x: 0, y: 0, z: 0 },
+    },
+  });
+  assert.match(await page.locator('#presetState').innerText(), /exact benchmark.*1\.15 s/);
+
+  await page.selectOption('#movementExperiment', 'prepared-relief');
+  assert.equal(await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getPreset()), 'wide-return');
+  await page.locator('#playerX').fill('2.4');
+  assert.equal(await page.evaluate(() => window.__THE_WALL_INTERCEPT_LAB__.getPreset()), 'custom');
+  assert.equal(await page.locator('#scenarioPreset').inputValue(), 'custom');
 
   await page.selectOption('#movementExperiment', 'prepared-relief');
   assert.equal(
