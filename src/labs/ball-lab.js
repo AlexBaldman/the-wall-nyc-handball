@@ -41,6 +41,7 @@ import {
   getWallSchoolDrill,
   scoreWallSchoolContact,
 } from '../game/wall-school.js';
+import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -1142,36 +1143,19 @@ function startSwing(techniqueKey, charge) {
   const handSpeed = (7.4 + charge * 7.2) * technique.pace * (input.modifiers.drive ? 1.08 : 1);
   const travelDistance = 1.28;
   const duration = Math.max(0.075, travelDistance / handSpeed);
-  const predictionTime = duration * 0.5;
-  const predictedBall = state.ball.active
-    ? {
-        x: state.ball.position.x + state.ball.velocity.x * predictionTime,
-        y: state.ball.position.y
-          + state.ball.velocity.y * predictionTime
-          - 0.5 * PHYSICS.gravity * predictionTime * predictionTime,
-        z: state.ball.position.z + state.ball.velocity.z * predictionTime,
-      }
-    : preparedStart;
-  const withinAssistReach = (
-    state.ball.active
-    && Math.abs(predictedBall.x - state.player.position.x) <= 0.78
-    && predictedBall.y >= 0.28
-    && predictedBall.y <= 1.8
-    && predictedBall.z >= state.player.position.z - 1.55
-    && predictedBall.z <= state.player.position.z + 0.55
-  );
-  const initialDirection = normalize(
-    subtract(target, withinAssistReach ? predictedBall : preparedStart),
-    { x: 0, y: 0, z: -1 },
-  );
-  const desiredStart = withinAssistReach
-    ? subtract(predictedBall, scale(initialDirection, travelDistance * 0.5))
-    : preparedStart;
-  const start = {
-    x: preparedStart.x + THREE.MathUtils.clamp(desiredStart.x - preparedStart.x, -0.22, 0.22),
-    y: preparedStart.y + THREE.MathUtils.clamp(desiredStart.y - preparedStart.y, -0.28, 0.28),
-    z: preparedStart.z + THREE.MathUtils.clamp(desiredStart.z - preparedStart.z, -0.42, 0.42),
-  };
+  const interceptPlan = ONE_WALL_HANDBALL.planIntercept({
+    ball: state.ball,
+    player: state.player,
+    preparing: false,
+    coefficients: physicsCoefficients,
+  });
+  const handAssist = ONE_WALL_HANDBALL.planHandStart({
+    interceptPlan,
+    preparedStart,
+    wallTarget: target,
+    desiredContactTime: duration * 0.5,
+  });
+  const start = handAssist.assisted ? handAssist.start : preparedStart;
   const assist = subtract(start, preparedStart);
   const direction = normalize(subtract(target, start), { x: 0, y: 0, z: -1 });
   const lift = input.modifiers.lift ? 0.21 : 0;
@@ -1188,6 +1172,7 @@ function startSwing(techniqueKey, charge) {
     elapsed: 0,
     duration,
     assist,
+    assisted: handAssist.assisted,
     madeContact: false,
   };
 }
