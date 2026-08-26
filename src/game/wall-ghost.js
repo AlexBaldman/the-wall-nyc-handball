@@ -3,7 +3,7 @@ const PROFILES = {
     id: 'rookie',
     name: 'Rookie Ghost',
     title: 'The Park Learner',
-    description: 'Reads late, plays safe, and leaves the corners open.',
+    description: 'Reads late, plays safe, and gives you more balls through the middle.',
     observationDelayMs: 168,
     observationIntervalTicks: 9,
     positionNoise: { x: 0.07, y: 0.05, z: 0.08 },
@@ -16,6 +16,7 @@ const PROFILES = {
     prepareEta: 0.58,
     releaseEta: 0.045,
     aimError: 0.5,
+    counterPressure: 0.28,
     english: 0.14,
     aggression: 0.08,
     recoveryDepth: 8.65,
@@ -146,6 +147,12 @@ export function chooseGhostTechnique(profile, {
   return 'palm';
 }
 
+function counterPressure(profile) {
+  return Number.isFinite(profile.counterPressure)
+    ? profile.counterPressure
+    : 0.42 + profile.aggression * 0.16;
+}
+
 export function ghostAim(profile, {
   playerX = 0,
   halfWidth,
@@ -153,7 +160,7 @@ export function ghostAim(profile, {
 }) {
   const activeProfile = getGhostProfile(profile?.id);
   const random = typeof signedRandom === 'function' ? signedRandom : () => 0;
-  const raw = -playerX * (0.42 + activeProfile.aggression * 0.16)
+  const raw = -playerX * counterPressure(activeProfile)
     + random(activeProfile.aimError);
   return Math.max(-halfWidth, Math.min(halfWidth, raw));
 }
