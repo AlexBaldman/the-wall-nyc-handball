@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Evidence to tuning
+
+### Playtest evidence
+
+- upgraded the MVP session export to schema v2 with exact build revision, canonical movement, opponent, camera, tempo, physics coefficients, contact mix, rally length, point ending, assist usage, and coaching provenance
+- added safe schema v1 migration plus explicit warnings for unknown revisions and undersized coaching samples
+- added a local-only multi-report Review Lab with confidence-aware cohort comparisons by difficulty, input mode, build, or tuning pack
+
+### Tuning guardrails
+
+- named four movement hypotheses—Canonical Live, Responsive Feet, Deliberate Weight, and Prepared Relief—without wiring candidates into Street Match
+- gated every candidate against the exact deterministic center-return, wall-bound, and wide-return intercept benchmarks in free and prepared movement states
+- added schema, migration, aggregation, boundary, smoke, staging, and browser coverage for the evidence loop
+
 ## 0.5.1 — Own the contact
 
 ### Feel pass

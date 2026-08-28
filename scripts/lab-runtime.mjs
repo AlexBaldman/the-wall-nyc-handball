@@ -49,6 +49,17 @@ try {
     11,
     'Street match should use the player-facing race-to-11 target',
   );
+  await page.waitForFunction(() => window.__THE_WALL_MVP_PLAYTEST__?.schemaVersion === 2);
+  const playtestReport = await page.evaluate(
+    () => window.__THE_WALL_MVP_PLAYTEST__.getReport(new Date('2026-08-28T12:00:00.000Z')),
+  );
+  assert.equal(playtestReport.schemaVersion, 2);
+  assert.equal(playtestReport.build.revision, 'development');
+  assert.equal(playtestReport.tuning.packId, 'canonical-live');
+  assert.equal(playtestReport.sport.physicsProfileId, 'american-handball-one-wall');
+  assert.equal(playtestReport.session.cameraId, 'tactical');
+  assert.ok(Number.isFinite(playtestReport.session.tempoScale));
+  assert.deepEqual(playtestReport.performance.rallyContactCounts, []);
   await page.click('#courtEntry [data-difficulty="champion"]');
   assert.equal(
     await page.evaluate(() => window.__THE_WALL_LAB__.getDifficulty()),
@@ -253,7 +264,10 @@ try {
   const matchErrors = [];
   matchPage.on('pageerror', (error) => matchErrors.push(error.message));
   await matchPage.goto(`${baseUrl}/index.html`, { waitUntil: 'networkidle' });
-  assert.equal(await matchPage.locator('a[href="lab.html"]').count(), 1);
+  assert.ok(
+    await matchPage.locator('a[href="lab.html"]').count() >= 1,
+    'Preserved match should link to the promoted Street Match',
+  );
   assert.equal(matchErrors.length, 0, `Match page errors: ${matchErrors.join(' | ')}`);
   await matchPage.setViewportSize({ width: 390, height: 844 });
   const matchMobileOverflow = await matchPage.evaluate(

@@ -1,5 +1,14 @@
-const REPORT_TYPE = 'the-wall-mvp-session';
-const SCHEMA_VERSION = 1;
+import {
+  createPlaytestSessionReport,
+  PLAYTEST_REPORT_SCHEMA_VERSION,
+  PLAYTEST_REPORT_TYPE,
+} from '../playtest/session-report.js';
+
+const FALLBACK_BUILD = Object.freeze({
+  version: 'unknown',
+  revision: 'development',
+  channel: 'local',
+});
 
 function waitForApis() {
   return new Promise((resolve) => {
@@ -9,6 +18,7 @@ function waitForApis() {
       if (
         lab?.getMatch
         && lab?.getMatchStats
+        && lab?.getPlaytestContext
         && lab?.getDifficulty
         && coach?.getSummary
         && coach?.getDiagnostic
@@ -22,39 +32,64 @@ function waitForApis() {
   });
 }
 
+async function loadBuildMetadata() {
+  try {
+    const response = await fetch('build.json', { cache: 'no-store' });
+    if (!response.ok) return FALLBACK_BUILD;
+    const value = await response.json();
+    return Object.freeze({
+      version: String(value.version ?? FALLBACK_BUILD.version),
+      revision: String(value.revision ?? FALLBACK_BUILD.revision),
+      channel: String(value.channel ?? FALLBACK_BUILD.channel),
+    });
+  } catch {
+    return FALLBACK_BUILD;
+  }
+}
+
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
-function createSessionReport({ lab, coach }, generatedAt = new Date()) {
+function createSessionReport({ lab, coach, build }, generatedAt = new Date()) {
   const mvpState = window.__THE_WALL_MVP__?.getState?.() ?? null;
   const match = lab.getMatch();
-  const matchStats = lab.getMatchStats();
-  const coachSummary = coach.getSummary();
-  const coachDiagnostic = coach.getDiagnostic();
+  const performance = lab.getMatchStats();
+  const context = lab.getPlaytestContext();
 
-  return Object.freeze({
-    schemaVersion: SCHEMA_VERSION,
-    type: REPORT_TYPE,
-    generatedAt: generatedAt.toISOString(),
-    session: Object.freeze({
+  return createPlaytestSessionReport({
+    generatedAt,
+    build,
+    sport: {
+      id: 'american-handball-one-wall',
+      physicsProfileId: context.physicsProfileId,
+    },
+    tuning: {
+      packId: context.tuningPackId,
+      movement: clone(context.movement),
+      ghostProfile: clone(context.ghostProfile),
+      physicsCoefficients: clone(context.physicsCoefficients),
+    },
+    session: {
       difficulty: lab.getDifficulty(),
       inputMode: mvpState?.inputMode ?? null,
       firstRun: mvpState?.firstRun ?? null,
-    }),
-    match: Object.freeze({
+      tempoScale: context.tempoScale,
+      cameraId: context.cameraId,
+    },
+    match: {
       targetScore: match?.targetScore ?? null,
       scores: clone(match?.scores ?? null),
       winner: match?.matchWinner ?? null,
       server: match?.server ?? null,
       pointWinner: match?.pointWinner ?? null,
       phase: match?.phase ?? null,
-    }),
-    performance: Object.freeze(clone(matchStats)),
-    coaching: Object.freeze({
-      summary: clone(coachSummary),
-      diagnostic: clone(coachDiagnostic),
-    }),
+    },
+    performance,
+    coaching: {
+      summary: clone(coach.getSummary()),
+      diagnostic: clone(coach.getDiagnostic()),
+    },
   });
 }
 
@@ -81,16 +116,17 @@ function installButton(download) {
   button.id = 'mvpSessionReportButton';
   button.type = 'button';
   button.textContent = 'Download MVP session JSON';
-  button.title = 'Export match stats plus coaching diagnostics for playtesting';
+  button.title = 'Export versioned match evidence plus coaching diagnostics for playtesting';
   button.addEventListener('click', download);
   replayButton.after(button);
   return button;
 }
 
-const apis = await waitForApis();
+const [apis, build] = await Promise.all([waitForApis(), loadBuildMetadata()]);
+const sources = Object.freeze({ ...apis, build });
 
 function report(generatedAt = new Date()) {
-  return createSessionReport(apis, generatedAt);
+  return createSessionReport(sources, generatedAt);
 }
 
 function download() {
@@ -104,6 +140,6 @@ installButton(download);
 window.__THE_WALL_MVP_PLAYTEST__ = {
   getReport: report,
   downloadReport: download,
-  type: REPORT_TYPE,
-  schemaVersion: SCHEMA_VERSION,
+  type: PLAYTEST_REPORT_TYPE,
+  schemaVersion: PLAYTEST_REPORT_SCHEMA_VERSION,
 };
