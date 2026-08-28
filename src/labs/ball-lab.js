@@ -232,6 +232,28 @@ const physicsCoefficients = {
   magnusScale: 1,
 };
 
+function createMatchStats() {
+  return {
+    totalContacts: 0,
+    cleanContacts: 0,
+    longestRally: 0,
+    bestPaceMph: 0,
+    pointsWon: 0,
+    pointsLost: 0,
+    ralliesCompleted: 0,
+    rallyContactCounts: [],
+    contactTypes: {},
+    spacingTypes: {},
+    pointReasons: {},
+    assistedContacts: 0,
+  };
+}
+
+function incrementCount(counts, key) {
+  const id = key || 'unknown';
+  counts[id] = (counts[id] ?? 0) + 1;
+}
+
 const state = {
   tick: 0,
   simulationTime: 0,
@@ -288,14 +310,7 @@ const state = {
   match: createMatchState({ targetScore: STREET_TARGET_SCORE }),
   difficulty: 'regular',
   onboardingStage: 0,
-  matchStats: {
-    totalContacts: 0,
-    cleanContacts: 0,
-    longestRally: 0,
-    bestPaceMph: 0,
-    pointsWon: 0,
-    pointsLost: 0,
-  },
+  matchStats: createMatchStats(),
   wallSchool: createWallSchoolState(),
   dropTracking: null,
   cameraIndex: 0,
@@ -321,14 +336,7 @@ function createStreetMatchState(overrides = {}) {
 }
 
 function resetMatchStats() {
-  state.matchStats = {
-    totalContacts: 0,
-    cleanContacts: 0,
-    longestRally: 0,
-    bestPaceMph: 0,
-    pointsWon: 0,
-    pointsLost: 0,
-  };
+  state.matchStats = createMatchStats();
 }
 
 function syncWallSchoolUi() {
@@ -2005,12 +2013,17 @@ function finishPointPresentation(point) {
   }
 }
 
+function recordCompletedRally(reason, contactCount = state.match.rallyContacts) {
+  const contacts = Math.max(0, Number(contactCount) || 0);
+  state.matchStats.ralliesCompleted += 1;
+  state.matchStats.rallyContactCounts.push(contacts);
+  state.matchStats.longestRally = Math.max(state.matchStats.longestRally, contacts);
+  incrementCount(state.matchStats.pointReasons, reason);
+}
+
 function resolveMatchPoint(winner, reason) {
   if (state.mode !== 'match' || !state.match.active || !winner) return;
-  state.matchStats.longestRally = Math.max(
-    state.matchStats.longestRally,
-    state.match.rallyContacts,
-  );
+  recordCompletedRally(reason);
   const result = awardRally(state.match, winner, reason);
   if (result.point.scored) {
     if (winner === 'player') state.matchStats.pointsWon += 1;
@@ -2026,6 +2039,7 @@ function resolveMatchPoint(winner, reason) {
 }
 
 function handleMatchServeFault(reason) {
+  const rallyContacts = state.match.rallyContacts;
   const result = resolveServeFault(state.match, reason);
   state.match = result.match;
   state.ball.active = false;
@@ -2035,6 +2049,7 @@ function handleMatchServeFault(reason) {
   input.activeTechnique = null;
 
   if (result.point) {
+    recordCompletedRally(result.point.reason ?? reason, rallyContacts);
     finishPointPresentation(result.point);
     return;
   }
@@ -2162,6 +2177,9 @@ function handleHandContact(contact, hitter = 'player') {
   if (hitter === 'player') {
     state.matchStats.totalContacts += 1;
     if (outcome.quality.pure) state.matchStats.cleanContacts += 1;
+    incrementCount(state.matchStats.contactTypes, outcome.shot.id);
+    incrementCount(state.matchStats.spacingTypes, outcome.spacing.id);
+    if (state.swing.assisted) state.matchStats.assistedContacts += 1;
     state.matchStats.bestPaceMph = Math.max(
       state.matchStats.bestPaceMph,
       outcome.paceMph,
@@ -3143,6 +3161,15 @@ window.__THE_WALL_LAB__ = {
   getReplay: () => recorder.export(),
   getMatch: () => cloneSerializable(state.match),
   getMatchStats: () => cloneSerializable(state.matchStats),
+  getPlaytestContext: () => cloneSerializable({
+    tuningPackId: 'canonical-live',
+    tempoScale: state.tempoScale,
+    cameraId: CAMERA_PRESETS[state.cameraIndex].id,
+    physicsProfileId: ONE_WALL_HANDBALL.physics.id,
+    physicsCoefficients,
+    movement: ONE_WALL_HANDBALL.movement,
+    ghostProfile: activeGhostProfile(),
+  }),
   getDifficulty: () => state.difficulty,
   getWallSchool: () => cloneSerializable(state.wallSchool),
   startWallSchoolDrill,

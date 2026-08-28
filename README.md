@@ -6,6 +6,8 @@ This is the extracted standalone version of the American handball concept that h
 
 [Play the true-scale 3D Street Match](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html)
 
+[Open the local-first Playtest Review Lab](https://alexbaldman.github.io/the-wall-nyc-handball/playtest.html)
+
 ## What it is
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
@@ -32,6 +34,8 @@ Version `0.5.1` adds an outcome-driven Wall School to the player-facing West 4th
 - perception-limited opponent reads sampled at profile-specific rates, perturbed with seeded noise, and projected forward through the same ballistics model
 - live contact explanations for clean spacing, jams, reaches, air swings, floor-before-wall downs, wall height, and first bounce
 - versioned `PlayerCommand`, `BallState`, `ContactRecord`, and `SimulationSnapshot` data—including score, server, expected hitter, point state, and deterministic shot/contact outcomes—plus replay JSON export
+- versioned MVP session reports with exact build, movement, opponent, physics, contact-mix, rally, point-ending, assist, and coaching provenance
+- a local-only Playtest Review Lab for multi-session cohort comparisons, small-sample warnings, v1 report migration, and benchmark-gated tuning candidates
 - deterministic competitive randomness in both the new lab and the preserved match baseline
 - automated geometry, drop, spin, tunneling, swept-hand, service/scoring, serialization, player/Ghost serve, delayed-perception, WebGL, interaction, and responsive-layout checks
 
@@ -165,6 +169,8 @@ npm run serve
 
 Then open `http://127.0.0.1:4173`.
 
+After a Street Match session, use **Download MVP session JSON** beside the replay export. Open `http://127.0.0.1:4173/playtest.html` and load several reports to compare difficulty, input, build, or tuning-pack cohorts. Reports stay in the current browser tab and are not uploaded or saved by the Review Lab.
+
 Run the deterministic validation suite before publishing:
 
 ```bash
@@ -177,6 +183,12 @@ With the local server running, the optional browser suite verifies WebGL, the of
 
 ```bash
 npm run test:lab-runtime
+```
+
+The standalone Review Lab browser check runs against that same local server:
+
+```bash
+npm run test:playtest-runtime
 ```
 
 Browser-test screenshots go to the operating system’s temporary directory by
@@ -200,12 +212,15 @@ GitHub Actions validates every pull request and stages the exact static artifact
 - `src/game/match-content.js`: static shots, opponents, drills, avatars, and timing profiles
 - `src/game/match-environment.js`: 2.5D court projection, physics tuning, cameras, rhythm presets, and venue palettes
 - `lab.html` / `lab.css`: true-scale 3D Street Match and collapsible calibration tools
+- `playtest.html` / `playtest.css`: local multi-report evidence dashboard and confidence-aware cohort view
 - `src/game/wall-ghost.js`: explicit Rookie, Regular, and Champion perception/movement profiles
 - `src/platform/`: shared optional browser capability adapters such as Gamepad input and rumble
 - `src/presentation/`: projections from official game measurements into renderer coordinates
 - `src/sim/`: serializable contracts, official measurements, seeded randomness, replay records, and BallisticsCore
 - `src/styles/tokens.css`: semantic visual foundation shared by both playable experiences
 - `src/labs/ball-lab.js`: Three.js match coordinator, physical actors/hands, cameras, onboarding, presentation, and telemetry
+- `src/playtest/session-report.js`: versioned session schema, v1 migration, validation, grouping, and cohort summaries
+- `src/sports/handball/playtest-tuning-packs.js`: named movement hypotheses and deterministic benchmark gates
 - `vendor/`: pinned browser runtime for Three.js plus its MIT license
 - `package.json`: pinned dependencies, validation, browser QA, and serving commands
 - `scripts/syntax.test.mjs`: automatic syntax discovery for every first-party JavaScript module

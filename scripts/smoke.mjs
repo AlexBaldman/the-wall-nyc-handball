@@ -20,6 +20,9 @@ const interceptCoach = read('src/labs/intercept-coach.js');
 const interceptHtml = read('intercept.html');
 const interceptCss = read('intercept.css');
 const interceptApp = read('src/labs/intercept-lab.js');
+const playtestHtml = read('playtest.html');
+const playtestCss = read('playtest.css');
+const playtestApp = read('src/labs/playtest-review-lab.js');
 const handballSportPack = read('src/sports/handball/sport-pack.js');
 
 if (!html.includes('<script type="module" src="app.js"></script>')) {
@@ -153,6 +156,36 @@ if (!interceptApp.includes('ONE_WALL_HANDBALL.planIntercept')) {
   fail('Intercept Lab must consume the handball SportPack planner rather than duplicate prediction logic.');
 }
 
+const playtestIds = [...playtestHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+const duplicatePlaytestIds = [
+  ...new Set(playtestIds.filter((id, index) => playtestIds.indexOf(id) !== index)),
+];
+if (duplicatePlaytestIds.length) {
+  fail(`Duplicate Playtest Review Lab ids: ${duplicatePlaytestIds.join(', ')}`);
+}
+const listedPlaytestBindings = [
+  ...playtestApp.matchAll(/^\s{2}'([^']+)',$/gm),
+].map((match) => match[1]);
+const missingPlaytestIds = [...new Set(
+  listedPlaytestBindings.filter((id) => !playtestIds.includes(id)),
+)];
+if (missingPlaytestIds.length) {
+  fail(`Playtest Review Lab references missing HTML ids: ${missingPlaytestIds.join(', ')}`);
+}
+const playtestAssets = [...playtestHtml.matchAll(/\s(?:href|src)="([^"]+)"/g)]
+  .map((match) => match[1])
+  .filter((path) => !/^(?:https?:|#|data:)/.test(path));
+for (const path of playtestAssets) {
+  const asset = resolve(root, path.replace(/^\.\//, ''));
+  if (!statSync(asset).isFile()) fail(`Missing local Playtest Review Lab asset: ${path}`);
+}
+if (!playtestApp.includes('validatePlaytestSessionReport')) {
+  fail('Playtest Review Lab must validate imported session evidence.');
+}
+if (!playtestCss.includes('@media (prefers-reduced-motion: reduce)')) {
+  fail('Playtest Review Lab reduced-motion styling is missing.');
+}
+
 const requiredShots = ['palm', 'slice', 'fist', 'backhand', 'kill', 'roller', 'lob'];
 const markupShots = [...html.matchAll(/data-shot="([^"]+)"/g)].map((match) => match[1]);
 for (const shot of requiredShots) {
@@ -215,6 +248,7 @@ for (const modulePath of [
   'src/sports/handball/hand-assist.js',
   'src/sports/handball/intercept-guidance.js',
   'src/sports/handball/intercept-planner.js',
+  'src/sports/handball/playtest-tuning-packs.js',
   'src/sports/handball/outcome-classifier.js',
   'src/sports/handball/physics-profile.js',
   'src/sports/handball/rules.js',
@@ -225,6 +259,8 @@ for (const modulePath of [
   'src/labs/ball-lab.js',
   'src/labs/intercept-coach.js',
   'src/labs/intercept-lab.js',
+  'src/labs/playtest-review-lab.js',
+  'src/playtest/session-report.js',
   'src/styles/tokens.css',
   'vendor/three.core.min.js',
   'vendor/three.module.min.js',
@@ -238,5 +274,6 @@ console.log(
   `Smoke check passed: ${htmlIds.length} unique ids, ${referencedIds.length} DOM bindings, `
     + `${requiredShots.length} shots, ${localAssets.length} match assets, `
     + `${labIds.length} Accuracy Lab ids, ${labAssets.length} lab assets, `
-    + `${interceptIds.length} Intercept Lab ids, ${interceptAssets.length} intercept assets.`
+    + `${interceptIds.length} Intercept Lab ids, ${interceptAssets.length} intercept assets, `
+    + `${playtestIds.length} Playtest Review Lab ids, ${playtestAssets.length} review assets.`
 );

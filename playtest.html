@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0d12">
+  <title>The Wall · Playtest Review Lab</title>
+  <link rel="stylesheet" href="playtest.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">The Wall · Evidence to tuning</p>
+        <h1>Playtest Review Lab</h1>
+        <p class="lede">Compare exported Street Match sessions locally, see where evidence is thin, and inspect benchmark-safe tuning candidates. Files never leave this browser tab.</p>
+      </div>
+      <nav class="links" aria-label="Lab navigation">
+        <a href="lab.html">Street Match / Ball Lab</a>
+        <a href="intercept.html">Intercept Lab</a>
+      </nav>
+    </header>
+
+    <section class="import-panel" aria-labelledby="importTitle">
+      <div>
+        <p class="section-tag">Local source</p>
+        <h2 id="importTitle">Load session reports</h2>
+        <p>Select one or more <code>the-wall-mvp-session</code> JSON files. Schema v1 reports are migrated with explicit provenance warnings.</p>
+      </div>
+      <div class="import-actions">
+        <label class="file-button" for="reportFiles">Choose JSON reports</label>
+        <input id="reportFiles" type="file" accept=".json,application/json" multiple>
+        <button id="clearReports" type="button">Clear</button>
+      </div>
+      <div class="source-state" aria-live="polite">
+        <strong id="sourceStatus">No reports loaded</strong>
+        <span id="sourceDetail">Waiting for local files.</span>
+      </div>
+      <ul id="importMessages" class="messages" aria-label="Import messages"></ul>
+    </section>
+
+    <section class="summary" aria-labelledby="summaryTitle">
+      <div class="section-heading">
+        <div>
+          <p class="section-tag">Observed sessions</p>
+          <h2 id="summaryTitle">What happened</h2>
+        </div>
+        <p id="confidenceNote" class="confidence">Load at least three sessions before treating a cohort as reviewable.</p>
+      </div>
+      <div class="metric-grid">
+        <article><span>Sessions</span><strong id="sessionsMetric">0</strong><small id="completedMetric">0 completed</small></article>
+        <article><span>Clean contact</span><strong id="cleanMetric">—</strong><small>weighted by player contacts</small></article>
+        <article><span>Rally length</span><strong id="rallyMetric">—</strong><small>average contacts / completed rally</small></article>
+        <article><span>Reachable reads</span><strong id="reachableMetric">—</strong><small>weighted coach visibility</small></article>
+        <article><span>Movement demand</span><strong id="movementMetric">—</strong><small>average meters to contact window</small></article>
+        <article><span>Cue changes</span><strong id="transitionMetric">—</strong><small>per 100 visible samples</small></article>
+      </div>
+    </section>
+
+    <section class="cohorts panel" aria-labelledby="cohortTitle">
+      <div class="section-heading">
+        <div>
+          <p class="section-tag">Comparison</p>
+          <h2 id="cohortTitle">Cohorts</h2>
+        </div>
+        <label class="group-control">Group by
+          <select id="groupDimension">
+            <option value="difficulty">Difficulty</option>
+            <option value="inputMode">Input mode</option>
+            <option value="build">Build revision</option>
+            <option value="tuningPack">Tuning pack</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cohort</th><th>Sessions</th><th>Win rate</th><th>Clean</th><th>Rally</th><th>Reachable</th><th>Movement</th></tr>
+          </thead>
+          <tbody id="cohortTableBody"><tr><td colspan="7" class="empty">Load reports to compare cohorts.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="breakdowns" aria-label="Performance breakdowns">
+      <article class="panel">
+        <p class="section-tag">Player contacts</p>
+        <h2>Shot mix</h2>
+        <div id="contactBreakdown" class="bars"><p class="empty">No contact evidence yet.</p></div>
+      </article>
+      <article class="panel">
+        <p class="section-tag">Contact envelope</p>
+        <h2>Spacing</h2>
+        <div id="spacingBreakdown" class="bars"><p class="empty">No spacing evidence yet.</p></div>
+      </article>
+      <article class="panel">
+        <p class="section-tag">Completed rallies</p>
+        <h2>Point endings</h2>
+        <div id="pointBreakdown" class="bars"><p class="empty">No rally evidence yet.</p></div>
+      </article>
+    </section>
+
+    <section class="candidates panel" aria-labelledby="candidateTitle">
+      <div class="section-heading">
+        <div>
+          <p class="section-tag">Deterministic guardrail</p>
+          <h2 id="candidateTitle">Tuning candidates</h2>
+        </div>
+        <p>Review-only. These packs do not change Street Match.</p>
+      </div>
+      <div id="candidatePacks" class="candidate-grid"></div>
+    </section>
+
+    <footer>
+      <p>A cohort becomes “reviewable” at three sessions; that label is a floor, not statistical significance. Coaching metrics also warn below 30 visible samples per report. Candidate gates prove benchmark reachability is preserved, not that a candidate feels better.</p>
+    </footer>
+  </main>
+  <noscript>This review lab needs JavaScript to read local report files.</noscript>
+  <script type="module" src="src/labs/playtest-review-lab.js"></script>
+</body>
+</html>

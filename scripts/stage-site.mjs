@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 const projectRoot = new URL('../', import.meta.url);
@@ -16,6 +16,8 @@ const files = [
   'lab.css',
   'intercept.html',
   'intercept.css',
+  'playtest.html',
+  'playtest.css',
   'outputs/the-wall-gameplay-final-clean.png',
 ];
 const directories = ['src', 'vendor'];
@@ -33,5 +35,14 @@ for (const directory of directories) {
   cpSync(new URL(directory, projectRoot), resolve(destination, directory), { recursive: true });
 }
 
+const packageJson = JSON.parse(readFileSync(new URL('package.json', projectRoot), 'utf8'));
+writeFileSync(
+  resolve(destination, 'build.json'),
+  `${JSON.stringify({
+    version: packageJson.version,
+    revision: process.env.GITHUB_SHA ?? 'development',
+    channel: process.env.GITHUB_ACTIONS ? 'github-pages' : 'staged',
+  }, null, 2)}\n`,
+);
 writeFileSync(resolve(destination, '.nojekyll'), '');
 console.log(`Static site staged in ${destination}.`);

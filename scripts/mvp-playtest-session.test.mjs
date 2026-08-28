@@ -13,14 +13,19 @@ assert.ok(
   'Street Match should compose the compact MVP playtest reporter',
 );
 assert.ok(html.includes('id="exportReplayButton"'));
-assert.ok(report.includes("const REPORT_TYPE = 'the-wall-mvp-session'"));
-assert.ok(report.includes('schemaVersion: SCHEMA_VERSION'));
+assert.ok(report.includes('PLAYTEST_REPORT_TYPE'));
+assert.ok(report.includes('PLAYTEST_REPORT_SCHEMA_VERSION'));
+assert.ok(report.includes('createPlaytestSessionReport'));
 assert.ok(report.includes('lab.getMatch()'));
 assert.ok(report.includes('lab.getMatchStats()'));
+assert.ok(report.includes('lab.getPlaytestContext()'));
 assert.ok(report.includes('lab.getDifficulty()'));
 assert.ok(report.includes('coach.getSummary()'));
 assert.ok(report.includes('coach.getDiagnostic()'));
 assert.ok(report.includes('__THE_WALL_MVP__?.getState'));
+assert.ok(report.includes("fetch('build.json'"));
+assert.ok(report.includes('physicsCoefficients'));
+assert.ok(report.includes('movement: clone(context.movement)'));
 assert.ok(report.includes('Download MVP session JSON'));
 assert.ok(report.includes('the-wall-mvp-session-${stamp}.json'));
 
