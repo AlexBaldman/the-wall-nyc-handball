@@ -13,7 +13,7 @@ This is the extracted standalone version of the American handball concept that h
 1. [Open 3D Street Match](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html), choose **Rookie**, and start with the recommended warm-up feed.
 2. Move with **WASD** (or the left stick), aim at the wall with the **mouse** (or right stick), then **hold and release Space** (or A / Cross) as the ball comes into reach.
 3. Start the first-to-11 street match and try to build a rally. Use **P / Esc** or the top-bar Pause button whenever you need a break; switching tabs also pauses a live rally.
-4. Follow the optional turquoise **return-position marker** and its **RELEASE NOW** cue. Toggle the guide with **H** or the top-bar control. Try Topspin (**J**), Backspin (**K**), and Fist (**L**) once Open Palm feels consistent.
+4. Select **Guided**, **Street**, or **Pure** hand assistance independently of Rookie/Regular/Champion. Follow the optional turquoise return-position marker and its **RELEASE** cue, which now accounts for hand travel time. Toggle the guide with **H**; explore Topspin (**J**), Backspin (**K**), and Fist (**L**) once Open Palm feels consistent.
 
 **Local review:** Run `npm ci`, `npm test`, and `npm run serve`, then open `http://127.0.0.1:4173/lab.html`. The web build is static, and tests cover the simulation and core gameplay contracts.
 
@@ -97,9 +97,9 @@ Current build includes:
 
 ## 3D beginner accessibility and rally tuning
 
-**Rookie** now favors more central, slightly higher wall targets with reduced spin and positional pressure. Practice and Rookie also use a small, bounded novice hand-start adjustment when a predicted reachable contact is close to the swing timing. The ball, hand-collision geometry, scoring rules, and fixed-step physics are unchanged; a visible physical hand-ball intersection is still required to strike.
+**Rookie** favors more central, slightly higher wall targets with reduced spin and positional pressure. Separately, select **Guided** for bounded novice hand-start help, **Street** for canonical bounded help, or **Pure** for no planned hand-start correction, regardless of opponent skill. The ball, hand-collision geometry, scoring rules, and fixed-step physics remain unchanged; the physical hand-ball intersection is still required to strike.
 
-The optional **Return Guide** projects the existing coach's recommended *foot position* into the current 3D camera, and surfaces a release cue only when its planner reports a playable contact window. It is a prediction rather than a guaranteed hit. Regular and Champion retain the canonical hand-start tolerance, and the playtest context reports the active assist profile.
+The optional **Return Guide** projects the coach's recommended *foot position* into the current 3D camera; the release cue now estimates the physical travel time between letting go of the button and the hand meeting the ball. A subtle non-colliding ball-ground reference improves depth readability, and camera smoothing is frame-rate independent. Session exports include assist mode, misses, and bounded frame pacing. These are predictions and visual aids, not guaranteed hits. [See the First Rally v0.6 evaluation notes](docs/first-rally-excellence-v06.md).
 
 ## Controls
 
