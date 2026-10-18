@@ -1,6 +1,7 @@
 import { deriveContactMetrics } from '../../sim/contact-metrics.js';
 import {
   HANDBALL_HAND_ASSIST,
+  HANDBALL_NOVICE_HAND_ASSIST,
   planHandStartAssist,
 } from './hand-assist.js';
 import {
@@ -54,6 +55,7 @@ export const ONE_WALL_HANDBALL = Object.freeze({
   movement: HANDBALL_PLAYER_MOVEMENT,
   contactEnvelope: HANDBALL_CONTACT_ENVELOPE,
   handAssist: HANDBALL_HAND_ASSIST,
+  noviceHandAssist: HANDBALL_NOVICE_HAND_ASSIST,
   coachDiagnostics: HANDBALL_COACH_DIAGNOSTIC_THRESHOLDS,
   deriveContactMetrics,
   classifyContact,
