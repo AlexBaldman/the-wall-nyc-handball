@@ -1,6 +1,7 @@
 import { normalize, scale, subtract } from '../../sim/ballistics.js';
 
 export const HANDBALL_HAND_ASSIST = Object.freeze({
+  id: 'canonical-hand-start',
   travelDistance: 1.28,
   approachFraction: 0.5,
   maxContactTimeError: 0.18,
@@ -8,6 +9,20 @@ export const HANDBALL_HAND_ASSIST = Object.freeze({
     x: 0.22,
     y: 0.28,
     z: 0.42,
+  }),
+});
+
+// Entry-level tolerance only: a few more centimeters of bounded hand-start
+// translation and a slightly wider candidate time fit. Contact still uses the
+// canonical swept hand collider; neither ball radius nor scoring changes.
+export const HANDBALL_NOVICE_HAND_ASSIST = Object.freeze({
+  ...HANDBALL_HAND_ASSIST,
+  id: 'novice-hand-start',
+  maxContactTimeError: 0.21,
+  maxOffset: Object.freeze({
+    x: 0.25,
+    y: 0.30,
+    z: 0.45,
   }),
 });
 

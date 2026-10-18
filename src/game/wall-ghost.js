@@ -15,10 +15,12 @@ const PROFILES = {
     preparedAcceleration: 10,
     prepareEta: 0.58,
     releaseEta: 0.045,
-    aimError: 0.5,
-    counterPressure: 0.28,
-    english: 0.14,
-    aggression: 0.08,
+    aimError: 0.3,
+    counterPressure: 0.2,
+    english: 0.08,
+    aggression: 0.04,
+    // Favor readable, central, higher-arcing returns without changing ball physics.
+    rallyWallHeight: 2.12,
     recoveryDepth: 8.65,
   },
   regular: {
@@ -40,6 +42,7 @@ const PROFILES = {
     aimError: 0.32,
     english: 0.32,
     aggression: 0.36,
+    rallyWallHeight: 1.86,
     recoveryDepth: 8.25,
   },
   champion: {
@@ -61,6 +64,7 @@ const PROFILES = {
     aimError: 0.16,
     english: 0.46,
     aggression: 0.72,
+    rallyWallHeight: 1.86,
     recoveryDepth: 7.95,
   },
 };

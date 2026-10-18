@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   HANDBALL_HAND_ASSIST,
+  HANDBALL_NOVICE_HAND_ASSIST,
   planHandStartAssist,
 } from '../src/sports/handball/hand-assist.js';
 import { ONE_WALL_HANDBALL } from '../src/sports/handball/sport-pack.js';
@@ -110,6 +111,35 @@ assert.deepEqual(
   multiCandidatePlan.window.candidates[1].position,
   'Assist should select the reachable contact closest to the physical swing timing',
 );
+
+const edgeTimingPlan = Object.freeze({
+  reachable: true,
+  window: Object.freeze({ candidates: Object.freeze([
+    Object.freeze({ time: 0.3, position: Object.freeze({ x: 0.45, y: 1.04, z: 3.7 }), reachMarginMeters: 0.1 }),
+  ]) }),
+});
+const canonicalEdge = planHandStartAssist({
+  interceptPlan: edgeTimingPlan,
+  preparedStart,
+  wallTarget,
+  desiredContactTime: 0.1,
+});
+const noviceEdge = planHandStartAssist({
+  interceptPlan: edgeTimingPlan,
+  preparedStart,
+  wallTarget,
+  desiredContactTime: 0.1,
+  config: HANDBALL_NOVICE_HAND_ASSIST,
+});
+assert.equal(canonicalEdge.assisted, false, 'Canonical timing must keep existing 180ms envelope');
+assert.equal(noviceEdge.assisted, true, 'Novice training can adjust the hand start for a 200ms candidate');
+for (const axis of ['x', 'y', 'z']) {
+  const actual = Math.abs(noviceEdge.start[axis] - preparedStart[axis]);
+  assert.ok(actual <= HANDBALL_NOVICE_HAND_ASSIST.maxOffset[axis] + 1e-12);
+}
+assert.equal(HANDBALL_NOVICE_HAND_ASSIST.maxContactTimeError, 0.21);
+assert.equal(ONE_WALL_HANDBALL.noviceHandAssist, HANDBALL_NOVICE_HAND_ASSIST);
+assert.ok(HANDBALL_NOVICE_HAND_ASSIST.maxOffset.x < 0.3, 'Beginner assist must not move the hand a foot');
 
 assert.deepEqual(preparedStart, { x: 0, y: 1, z: 4 }, 'Assist must not mutate caller vectors');
 assert.deepEqual(wallTarget, { x: 0.6, y: 0.55, z: 0 }, 'Assist must not mutate the wall target');

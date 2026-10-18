@@ -1158,11 +1158,15 @@ function startSwing(techniqueKey, charge) {
     preparing: false,
     coefficients: physicsCoefficients,
   });
+  const assistConfig = state.mode === 'practice' || state.difficulty === 'rookie'
+    ? ONE_WALL_HANDBALL.noviceHandAssist
+    : ONE_WALL_HANDBALL.handAssist;
   const handAssist = ONE_WALL_HANDBALL.planHandStart({
     interceptPlan,
     preparedStart,
     wallTarget: target,
     desiredContactTime: duration * 0.5,
+    config: assistConfig,
   });
   const start = handAssist.assisted ? handAssist.start : preparedStart;
   const assist = subtract(start, preparedStart);
@@ -1289,7 +1293,7 @@ function startAiSwing() {
         ? 0.82 + rng.signed(0.06)
       : techniqueKey === 'topspin'
         ? 1.62
-        : 1.86 + rng.signed(0.18),
+        : profile.rallyWallHeight + rng.signed(0.18),
     z: 0,
   };
   const canAssist = (
@@ -3199,7 +3203,30 @@ syncOpponentUi();
 syncWallSchoolUi();
 setOnboardingStage(0);
 ui.seedValue.textContent = `0x${SEED.toString(16).toUpperCase()}`;
+// Read-only camera projection for court-space HUD cues. Visual callers never
+// receive the mutable Three.js scene or any authority over the simulation.
+function projectCourtPoint(point = {}) {
+  const projected = new THREE.Vector3(
+    Number.isFinite(point.x) ? point.x : 0,
+    Number.isFinite(point.y) ? point.y : 0.035,
+    Number.isFinite(point.z) ? point.z : 0,
+  ).project(camera);
+  const visible = Number.isFinite(projected.x)
+    && Number.isFinite(projected.y)
+    && Number.isFinite(projected.z)
+    && Math.abs(projected.x) <= 1
+    && Math.abs(projected.y) <= 1
+    && projected.z >= -1
+    && projected.z <= 1;
+  return Object.freeze({
+    visible,
+    xPercent: (projected.x + 1) * 50,
+    yPercent: (1 - projected.y) * 50,
+  });
+}
+
 window.__THE_WALL_LAB__ = {
+  projectCourtPoint,
   getSnapshot: () => cloneSerializable(currentSnapshot()),
   getReplay: () => recorder.export(),
   getMatch: () => cloneSerializable(state.match),
@@ -3212,6 +3239,9 @@ window.__THE_WALL_LAB__ = {
     physicsCoefficients,
     movement: ONE_WALL_HANDBALL.movement,
     ghostProfile: activeGhostProfile(),
+    handAssistProfileId: state.mode === 'practice' || state.difficulty === 'rookie'
+      ? ONE_WALL_HANDBALL.noviceHandAssist.id
+      : ONE_WALL_HANDBALL.handAssist.id,
   }),
   getDifficulty: () => state.difficulty,
   getWallSchool: () => cloneSerializable(state.wallSchool),
