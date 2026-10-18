@@ -13,7 +13,7 @@ This is the extracted standalone version of the American handball concept that h
 1. [Open 3D Street Match](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html), choose **Rookie**, and start with the recommended warm-up feed.
 2. Move with **WASD** (or the left stick), aim at the wall with the **mouse** (or right stick), then **hold and release Space** (or A / Cross) as the ball comes into reach.
 3. Start the first-to-11 street match and try to build a rally. Use **P / Esc** or the top-bar Pause button whenever you need a break; switching tabs also pauses a live rally.
-4. Try Topspin (**J**), Backspin (**K**), and Fist (**L**) once Open Palm feels consistent. The live contact coach explains misses and clean hits.
+4. Follow the optional turquoise **return-position marker** and its **RELEASE NOW** cue. Toggle the guide with **H** or the top-bar control. Try Topspin (**J**), Backspin (**K**), and Fist (**L**) once Open Palm feels consistent.
 
 **Local review:** Run `npm ci`, `npm test`, and `npm run serve`, then open `http://127.0.0.1:4173/lab.html`. The web build is static, and tests cover the simulation and core gameplay contracts.
 
@@ -95,6 +95,12 @@ Current build includes:
 - a graffiti, street-poster, hip-hop-mixtape, comic-book, and pixel-art presentation layer
 - live status messaging, help dialog, and reduced-motion support
 
+## 3D beginner accessibility and rally tuning
+
+**Rookie** now favors more central, slightly higher wall targets with reduced spin and positional pressure. Practice and Rookie also use a small, bounded novice hand-start adjustment when a predicted reachable contact is close to the swing timing. The ball, hand-collision geometry, scoring rules, and fixed-step physics are unchanged; a visible physical hand-ball intersection is still required to strike.
+
+The optional **Return Guide** projects the existing coach's recommended *foot position* into the current 3D camera, and surfaces a release cue only when its planner reports a playable contact window. It is a prediction rather than a guaranteed hit. Regular and Champion retain the canonical hand-start tolerance, and the playtest context reports the active assist profile.
+
 ## Controls
 
 ### 3D Street Match
@@ -110,6 +116,7 @@ Current build includes:
 - `Wall School`: choose Clean, Pace, or Spin in the side panel to start a scored physical practice feed
 - `C`: cycle Tactical, Player, and Courtside cameras
 - `P` or `Esc`: pause / resume the rally; switching browser tabs pauses live play so you don't lose a point
+- `H`: toggle the on-court return positioning / contact-window guide (visual-only, saved per browser)
 - `Backspace`: reset the match
 - `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
 
