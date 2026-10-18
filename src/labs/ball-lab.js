@@ -510,6 +510,7 @@ scene.fog = new THREE.Fog(0x07131d, 16, 34);
 const camera = new THREE.PerspectiveCamera(27, 1, 0.02, 80);
 camera.position.copy(CAMERA_PRESETS[state.cameraIndex].position);
 camera.lookAt(CAMERA_PRESETS[state.cameraIndex].target);
+const cameraLookAt = CAMERA_PRESETS[state.cameraIndex].target.clone();
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -851,7 +852,23 @@ function createBallVisual() {
   );
   scene.add(aura);
 
-  return { ball, aura };
+  // A subtle court-space ground reference makes the tiny regulation ball easier
+  // to locate in depth. It is visual only and never enters collision detection.
+  const groundGuide = new THREE.Mesh(
+    new THREE.RingGeometry(0.13, 0.18, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xb9ff66,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  groundGuide.rotation.x = -Math.PI / 2;
+  groundGuide.position.y = 0.024;
+  scene.add(groundGuide);
+
+  return { ball, aura, groundGuide };
 }
 
 function createPlayerVisual() {
@@ -2594,6 +2611,7 @@ function updateVisuals(snapshot = null) {
 
   ballObjects.ball.visible = ballState.active;
   ballObjects.aura.visible = ballState.active;
+  ballObjects.groundGuide.visible = ballState.active;
   if (ballState.active) {
     ballObjects.ball.position.set(
       ballState.position.x,
@@ -2601,6 +2619,10 @@ function updateVisuals(snapshot = null) {
       ballState.position.z,
     );
     ballObjects.aura.position.copy(ballObjects.ball.position);
+    ballObjects.groundGuide.position.set(ballState.position.x, 0.024, ballState.position.z);
+    const height = Math.max(0, ballState.position.y - BALL.radius);
+    ballObjects.groundGuide.scale.setScalar(0.85 + Math.min(0.9, height * 0.55));
+    ballObjects.groundGuide.material.opacity = Math.max(0.12, 0.42 - height * 0.14);
     ballObjects.ball.rotation.x += (ballState.angularVelocity.x ?? 0) / 60;
     ballObjects.ball.rotation.y += (ballState.angularVelocity.y ?? 0) / 60;
   }
@@ -2655,7 +2677,7 @@ function updateVisuals(snapshot = null) {
   }
 }
 
-function updateCamera() {
+function updateCamera(delta = 1 / 60) {
   const preset = CAMERA_PRESETS[state.cameraIndex];
   const focusX = state.mode === 'match'
     ? (state.player.position.x + state.ai.position.x) * 0.5
@@ -2667,10 +2689,13 @@ function updateCamera() {
       : 0;
   const desiredPosition = preset.position.clone();
   desiredPosition.x += lateralFollow;
-  camera.position.lerp(desiredPosition, 0.075);
+  // Exponential smoothing is frame-rate independent, unlike a fixed lerp step.
+  const cameraAlpha = 1 - Math.exp(-Math.max(0, delta) * 4.7);
+  camera.position.lerp(desiredPosition, cameraAlpha);
   const target = preset.target.clone();
   target.x += focusX * (state.cameraIndex === 1 ? 0.09 : 0.03);
-  camera.lookAt(target);
+  cameraLookAt.lerp(target, cameraAlpha);
+  camera.lookAt(cameraLookAt);
 
   const sensorHeight = 24;
   camera.fov = THREE.MathUtils.radToDeg(
@@ -3033,7 +3058,7 @@ function frame(timestamp) {
 
   if (!paused) {
     updateVisuals(replaySnapshot);
-    updateCamera();
+    updateCamera(delta);
     syncTelemetryUi(timestamp);
   }
   renderer.render(scene, camera);
