@@ -102,7 +102,7 @@ if (api?.setPaused && api?.isPaused && viewport && actions) {
     const isPaused = reasons.size > 0;
     api.setPaused(isPaused);
     overlay.hidden = !isPaused;
-    pauseButton.textContent = isPaused ? '▶ Resume' : 'Ⅱ Pause';
+    pauseButton.textContent = isPaused ? '▶ Resume' : '⏸ Pause';
     pauseButton.setAttribute('aria-pressed', String(isPaused));
     resumeButton.disabled = reasons.has('help');
   }
