@@ -80,6 +80,7 @@ function createSessionReport({ lab, coach, build }, generatedAt = new Date()) {
       firstRun: mvpState?.firstRun ?? null,
       tempoScale: context.tempoScale,
       cameraId: context.cameraId,
+      renderHealth: clone(context.renderHealth),
     },
     match: {
       targetScore: match?.targetScore ?? null,
