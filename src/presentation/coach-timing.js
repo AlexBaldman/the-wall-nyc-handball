@@ -17,7 +17,7 @@ export function deriveReleaseCue({
   const distance = Math.max(0, footwork?.movementDistanceMeters ?? 0);
   if (distance > 0.2 && remaining > 0.08) return 'move';
   if (remaining > 0.17) return preparing ? 'hold' : 'move';
-  if (remaining > 0.055) return preparing ? 'hold' : 'prepare';
+  if (remaining > 0.06) return preparing ? 'hold' : 'prepare';
   if (remaining >= -0.045) return 'strike';
   // Once the optimal release window has passed, do not keep showing RELEASE NOW.
   return preparing ? 'hold' : 'recover';
