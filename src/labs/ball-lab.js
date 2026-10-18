@@ -554,6 +554,20 @@ let audioContext = null;
 let accumulator = 0;
 let lastFrameTime = performance.now();
 let lastUiUpdate = 0;
+const recentFrameTimesMs = [];
+
+function getRenderHealth() {
+  if (!recentFrameTimesMs.length) return { sampleFrames: 0, meanFps: null, p95FrameMs: null, slowFrameRate: null };
+  const sorted = [...recentFrameTimesMs].sort((a, b) => a - b);
+  const average = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
+  const slowFrames = sorted.filter((value) => value > 33.4).length;
+  return Object.freeze({
+    sampleFrames: sorted.length,
+    meanFps: Math.round(1000 / average * 10) / 10,
+    p95FrameMs: Math.round(sorted[Math.ceil(sorted.length * 0.95) - 1] * 10) / 10,
+    slowFrameRate: Math.round(slowFrames / sorted.length * 1000) / 1000,
+  });
+}
 
 function createCourtTexture() {
   const textureCanvas = document.createElement('canvas');
@@ -3043,6 +3057,10 @@ function shortcutBlocked(event) {
 function frame(timestamp) {
   const delta = Math.min(0.05, Math.max(0, (timestamp - lastFrameTime) / 1000));
   lastFrameTime = timestamp;
+  if (!paused && !document.hidden && delta >= 0.001 && delta <= 0.05) {
+    recentFrameTimesMs.push(delta * 1000);
+    if (recentFrameTimesMs.length > 120) recentFrameTimesMs.shift();
+  }
   const replaySnapshot = paused ? null : updateReplay(delta);
 
   if (!paused && !state.replayPlayback) {
@@ -3283,6 +3301,7 @@ window.__THE_WALL_LAB__ = {
     physicsCoefficients,
     movement: ONE_WALL_HANDBALL.movement,
     ghostProfile: activeGhostProfile(),
+    renderHealth: getRenderHealth(),
     assistanceProfileId: state.assistance,
     handAssistProfileId: resolveHandAssistConfig(state.assistance, ONE_WALL_HANDBALL)?.id ?? 'none',
   }),
