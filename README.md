@@ -8,6 +8,15 @@ This is the extracted standalone version of the American handball concept that h
 
 [Open the local-first Playtest Review Lab](https://alexbaldman.github.io/the-wall-nyc-handball/playtest.html)
 
+## Try the 3D match in 60 seconds
+
+1. [Open 3D Street Match](https://alexbaldman.github.io/the-wall-nyc-handball/lab.html), choose **Rookie**, and start with the recommended warm-up feed.
+2. Move with **WASD** (or the left stick), aim at the wall with the **mouse** (or right stick), then **hold and release Space** (or A / Cross) as the ball comes into reach.
+3. Start the first-to-11 street match and try to build a rally. Use **P / Esc** or the top-bar Pause button whenever you need a break; switching tabs also pauses a live rally.
+4. Try Topspin (**J**), Backspin (**K**), and Fist (**L**) once Open Palm feels consistent. The live contact coach explains misses and clean hits.
+
+**Local review:** Run `npm ci`, `npm test`, and `npm run serve`, then open `http://127.0.0.1:4173/lab.html`. The web build is static, and tests cover the simulation and core gameplay contracts.
+
 ## What it is
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
@@ -100,6 +109,7 @@ Current build includes:
 - `F`: interrupt with a solo practice feed
 - `Wall School`: choose Clean, Pace, or Spin in the side panel to start a scored physical practice feed
 - `C`: cycle Tactical, Player, and Courtside cameras
+- `P` or `Esc`: pause / resume the rally; switching browser tabs pauses live play so you don't lose a point
 - `Backspace`: reset the match
 - `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
 

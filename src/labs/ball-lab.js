@@ -137,6 +137,7 @@ const STREET_TARGET_SCORE = 11;
 const SEED = 0x57414c4c;
 const rng = createSeededRandom(SEED);
 let recorder = createReplayRecorder({ seed: SEED });
+let paused = false;
 
 const TECHNIQUES = {
   palm: {
@@ -1107,7 +1108,7 @@ function restingHandPosition(charge = 0) {
 }
 
 function beginTechnique(technique) {
-  if (!TECHNIQUES[technique] || state.replayPlayback) return;
+  if (!TECHNIQUES[technique] || state.replayPlayback || paused) return;
   unlockAudio();
   if (input.activeTechnique) return;
   if (
@@ -1136,7 +1137,7 @@ function beginTechnique(technique) {
 }
 
 function releaseTechnique(technique) {
-  if (input.activeTechnique !== technique || state.replayPlayback) return;
+  if (input.activeTechnique !== technique || state.replayPlayback || paused) return;
   const charge = currentCharge();
   input.activeTechnique = null;
   startSwing(technique, charge);
@@ -2965,12 +2966,38 @@ function downloadReplay() {
   URL.revokeObjectURL(href);
 }
 
+function setPaused(nextPaused) {
+  const desired = Boolean(nextPaused);
+  if (paused === desired) return paused;
+  paused = desired;
+  // Never turn a held key or a focus loss into an unintended swing.
+  input.activeTechnique = null;
+  input.keys.clear();
+  input.move = { x: 0, z: 0 };
+  input.touchMove = { x: 0, z: 0 };
+  input.gamepadButtons = Array.from(
+    findGamepad(input.gamepadIndex)?.buttons ?? [],
+    (button) => Boolean(button.pressed),
+  );
+  updateKeyboardModifiers();
+  syncTechniqueUi();
+  return paused;
+}
+
+function shortcutBlocked(event) {
+  const target = event.target;
+  return event.altKey || event.ctrlKey || event.metaKey
+    || Boolean(document.querySelector('dialog[open]'))
+    || (target instanceof Element
+      && Boolean(target.closest('button, input, select, textarea, [contenteditable="true"]')));
+}
+
 function frame(timestamp) {
   const delta = Math.min(0.05, Math.max(0, (timestamp - lastFrameTime) / 1000));
   lastFrameTime = timestamp;
-  const replaySnapshot = updateReplay(delta);
+  const replaySnapshot = paused ? null : updateReplay(delta);
 
-  if (!state.replayPlayback) {
+  if (!paused && !state.replayPlayback) {
     accumulator += delta * state.tempoScale;
     let steps = 0;
     while (accumulator >= SIMULATION_DT && steps < 8) {
@@ -2981,14 +3008,17 @@ function frame(timestamp) {
     if (steps === 8) accumulator = 0;
   }
 
-  updateVisuals(replaySnapshot);
-  updateCamera();
-  syncTelemetryUi(timestamp);
+  if (!paused) {
+    updateVisuals(replaySnapshot);
+    updateCamera();
+    syncTelemetryUi(timestamp);
+  }
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
 window.addEventListener('keydown', (event) => {
+  if (paused || shortcutBlocked(event)) return;
   const technique = KEY_TECHNIQUES.get(event.code);
   if (technique) {
     event.preventDefault();
@@ -3008,6 +3038,15 @@ window.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('keyup', (event) => {
+  if (paused || shortcutBlocked(event)) {
+    input.keys.delete(event.code);
+    if (input.activeTechnique === KEY_TECHNIQUES.get(event.code)) {
+      input.activeTechnique = null;
+      syncTechniqueUi();
+    }
+    updateKeyboardModifiers();
+    return;
+  }
   const technique = KEY_TECHNIQUES.get(event.code);
   if (technique) {
     event.preventDefault();
@@ -3019,11 +3058,15 @@ window.addEventListener('keyup', (event) => {
 });
 
 window.addEventListener('blur', () => {
-  if (input.activeTechnique) releaseTechnique(input.activeTechnique);
-  input.keys.clear();
-  input.move = { x: 0, z: 0 };
-  input.touchMove = { x: 0, z: 0 };
-  updateKeyboardModifiers();
+  if (state.ball.active || state.match.active || state.replayPlayback) {
+    setPaused(true);
+  } else {
+    input.activeTechnique = null;
+    input.keys.clear();
+    input.move = { x: 0, z: 0 };
+    input.touchMove = { x: 0, z: 0 };
+    updateKeyboardModifiers();
+  }
 });
 
 canvas.addEventListener('pointermove', updateAimFromPointer);
@@ -3175,6 +3218,8 @@ window.__THE_WALL_LAB__ = {
   startWallSchoolDrill,
   getAiObservation: () => cloneSerializable(state.ai.observation),
   setDifficulty,
+  setPaused,
+  isPaused: () => paused,
   feedBall,
   startRallyPoint,
   startGhostPoint: () => {
