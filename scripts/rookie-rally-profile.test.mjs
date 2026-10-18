@@ -12,7 +12,7 @@ const rookieAim = ghostAim(rookie, { playerX, halfWidth, signedRandom: noNoise }
 const regularAim = ghostAim(regular, { playerX, halfWidth, signedRandom: noNoise });
 const championAim = ghostAim(champion, { playerX, halfWidth, signedRandom: noNoise });
 
-assert.equal(rookie.counterPressure, 0.28);
+assert.equal(rookie.counterPressure, 0.2);
 assert.ok(
   Math.abs(rookieAim) < Math.abs(regularAim) * 0.65,
   `Rookie should send materially more neutral returns: rookie ${rookieAim}, regular ${regularAim}`,
@@ -44,7 +44,10 @@ assert.ok(
 
 assert.equal(rookie.moveSpeed, 3.05);
 assert.equal(rookie.observationDelayMs, 168);
-assert.equal(rookie.english, 0.14);
-assert.equal(rookie.aggression, 0.08);
+assert.equal(rookie.english, 0.08);
+assert.equal(rookie.aggression, 0.04);
+assert.ok(rookie.aimError < regular.aimError, 'Rookie aim error should keep playable central returns');
+assert.ok(rookie.rallyWallHeight > regular.rallyWallHeight, 'Rookie should favor a higher, more readable wall target');
+assert.equal(regular.rallyWallHeight, champion.rallyWallHeight);
 
 console.log('Rookie rally-pressure profile passed.');
