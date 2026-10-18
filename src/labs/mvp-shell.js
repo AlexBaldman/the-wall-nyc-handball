@@ -301,6 +301,7 @@ function syncHelpControls(dialog) {
     <li><b>Aim:</b> ${copy.aim}</li>
     <li><b>Open palm:</b> ${copy.hit}</li>
     <li><b>Spin:</b> J/K or X/B on gamepad; extra contact buttons on touch.</li>
+    <li><b>Pause:</b> P / Esc or Pause in the top bar. Switching tabs freezes a live rally.</li>
   `;
 }
 
@@ -439,3 +440,6 @@ window.__THE_WALL_MVP__ = {
   openHelp: () => helpDialog?.showModal(),
   getStorageKey: () => STORAGE_KEY,
 };
+
+// Initialize pause after the help dialog and game API are ready.
+await import('./mvp-pause.js');
