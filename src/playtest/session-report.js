@@ -15,6 +15,8 @@ const EMPTY_PERFORMANCE = Object.freeze({
   spacingTypes: Object.freeze({}),
   pointReasons: Object.freeze({}),
   assistedContacts: 0,
+  swingAttempts: 0,
+  airSwings: 0,
 });
 
 function clone(value) {
@@ -58,6 +60,8 @@ function normalizePerformance(value = {}) {
     spacingTypes: countMap(value.spacingTypes),
     pointReasons: countMap(value.pointReasons),
     assistedContacts: Math.max(0, Math.trunc(finite(value.assistedContacts))),
+    swingAttempts: Math.max(0, Math.trunc(finite(value.swingAttempts))),
+    airSwings: Math.max(0, Math.trunc(finite(value.airSwings))),
   };
 }
 
