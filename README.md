@@ -100,6 +100,7 @@ Current build includes:
 - `F`: interrupt with a solo practice feed
 - `Wall School`: choose Clean, Pace, or Spin in the side panel to start a scored physical practice feed
 - `C`: cycle Tactical, Player, and Courtside cameras
+- `P` or `Esc`: pause / resume the rally; switching browser tabs pauses live play so you don't lose a point
 - `Backspace`: reset the match
 - `Court tempo`: 78% by default for readability; 100% runs the physical simulation at street-real time
 
