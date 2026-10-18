@@ -42,6 +42,7 @@ import {
   scoreWallSchoolContact,
 } from '../game/wall-school.js';
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
+import { resolveAssistanceProfile, resolveHandAssistConfig } from '../sports/handball/assistance-profile.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -247,6 +248,8 @@ function createMatchStats() {
     spacingTypes: {},
     pointReasons: {},
     assistedContacts: 0,
+    swingAttempts: 0,
+    airSwings: 0,
   };
 }
 
@@ -310,6 +313,7 @@ const state = {
   mode: 'practice',
   match: createMatchState({ targetScore: STREET_TARGET_SCORE }),
   difficulty: 'regular',
+  assistance: 'guided',
   onboardingStage: 0,
   matchStats: createMatchStats(),
   wallSchool: createWallSchoolState(),
@@ -327,6 +331,19 @@ const state = {
 
 function activeGhostProfile() {
   return getGhostProfile(state.difficulty);
+}
+
+function setAssistance(id) {
+  const next = resolveAssistanceProfile(id);
+  state.assistance = next.id;
+  return next.id;
+}
+
+function getSwingContactLag() {
+  const charge = input.activeTechnique ? currentCharge() : 0.2;
+  const technique = TECHNIQUES[input.activeTechnique ?? state.selectedTechnique];
+  const handSpeed = (7.4 + charge * 7.2) * technique.pace * (input.modifiers.drive ? 1.08 : 1);
+  return Math.max(0.075, 1.28 / handSpeed) * 0.5;
 }
 
 function createStreetMatchState(overrides = {}) {
@@ -1158,16 +1175,17 @@ function startSwing(techniqueKey, charge) {
     preparing: false,
     coefficients: physicsCoefficients,
   });
-  const assistConfig = state.mode === 'practice' || state.difficulty === 'rookie'
-    ? ONE_WALL_HANDBALL.noviceHandAssist
-    : ONE_WALL_HANDBALL.handAssist;
-  const handAssist = ONE_WALL_HANDBALL.planHandStart({
-    interceptPlan,
-    preparedStart,
-    wallTarget: target,
-    desiredContactTime: duration * 0.5,
-    config: assistConfig,
-  });
+  const assistConfig = resolveHandAssistConfig(state.assistance, ONE_WALL_HANDBALL);
+  const handAssist = assistConfig
+    ? ONE_WALL_HANDBALL.planHandStart({
+      interceptPlan,
+      preparedStart,
+      wallTarget: target,
+      desiredContactTime: duration * 0.5,
+      config: assistConfig,
+    })
+    : { assisted: false, start: preparedStart };
+  state.matchStats.swingAttempts += 1;
   const start = handAssist.assisted ? handAssist.start : preparedStart;
   const assist = subtract(start, preparedStart);
   const direction = normalize(subtract(target, start), { x: 0, y: 0, z: -1 });
@@ -2242,6 +2260,7 @@ function explainMiss() {
   else if (state.ball.position.y > 1.75) reason = 'High — point higher and meet it earlier, or let it drop.';
   else if (state.ball.position.y < 0.35) reason = 'Low — get closer to the bounce and release through its rise.';
 
+  state.matchStats.airSwings += 1;
   ui.contactGrade.textContent = 'Air swing';
   ui.contactReason.textContent = reason;
   ui.spacingMetric.textContent = lateral > 0.75 ? 'Reached' : 'No overlap';
@@ -3239,11 +3258,13 @@ window.__THE_WALL_LAB__ = {
     physicsCoefficients,
     movement: ONE_WALL_HANDBALL.movement,
     ghostProfile: activeGhostProfile(),
-    handAssistProfileId: state.mode === 'practice' || state.difficulty === 'rookie'
-      ? ONE_WALL_HANDBALL.noviceHandAssist.id
-      : ONE_WALL_HANDBALL.handAssist.id,
+    assistanceProfileId: state.assistance,
+    handAssistProfileId: resolveHandAssistConfig(state.assistance, ONE_WALL_HANDBALL)?.id ?? 'none',
   }),
   getDifficulty: () => state.difficulty,
+  getAssistance: () => state.assistance,
+  getSwingContactLag,
+  setAssistance,
   getWallSchool: () => cloneSerializable(state.wallSchool),
   startWallSchoolDrill,
   getAiObservation: () => cloneSerializable(state.ai.observation),
