@@ -5,10 +5,12 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const entry = read('src/labs/ball-lab-entry.js');
+const shell = read('src/labs/mvp-shell.js');
 const game = read('src/labs/ball-lab.js');
 const pause = read('src/labs/mvp-pause.js');
 
-assert.ok(entry.includes("import './mvp-pause.js';"), 'Pause UI must load from the Street Match entrypoint');
+assert.ok(entry.includes("import './mvp-shell.js';"), 'The first-run shell must load from the Street Match entrypoint');
+assert.ok(shell.includes("await import('./mvp-pause.js');"), 'Pause must initialize after the help dialog exists');
 assert.ok(game.includes('function setPaused(nextPaused)'), 'The game must expose simulation pause');
 assert.ok(game.includes('isPaused: () => paused'), 'The presentation layer must be able to read pause state');
 assert.ok(game.includes('const replaySnapshot = paused ? null : updateReplay(delta)'));
