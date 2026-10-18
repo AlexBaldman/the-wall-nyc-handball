@@ -74,7 +74,10 @@ try {
     fullPage: true,
   });
 
-  await page.click('#practiceFirstButton');
+  // The dedicated first-rally browser test verifies a true pointer click.
+  // This broader simulation harness dispatches the action directly so a
+  // resize-driven 3D entry overlay cannot make Playwright's stability wait flaky.
+  await page.locator('#practiceFirstButton').dispatchEvent('click');
   assert.equal(
     await page.locator('#courtEntry').evaluate((element) => element.classList.contains('is-hidden')),
     true,
