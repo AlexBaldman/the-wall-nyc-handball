@@ -1289,7 +1289,7 @@ function startAiSwing() {
         ? 0.82 + rng.signed(0.06)
       : techniqueKey === 'topspin'
         ? 1.62
-        : 1.86 + rng.signed(0.18),
+        : profile.rallyWallHeight + rng.signed(0.18),
     z: 0,
   };
   const canAssist = (
