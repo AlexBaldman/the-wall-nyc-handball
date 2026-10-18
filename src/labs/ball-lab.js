@@ -1158,11 +1158,15 @@ function startSwing(techniqueKey, charge) {
     preparing: false,
     coefficients: physicsCoefficients,
   });
+  const assistConfig = state.mode === 'practice' || state.difficulty === 'rookie'
+    ? ONE_WALL_HANDBALL.noviceHandAssist
+    : ONE_WALL_HANDBALL.handAssist;
   const handAssist = ONE_WALL_HANDBALL.planHandStart({
     interceptPlan,
     preparedStart,
     wallTarget: target,
     desiredContactTime: duration * 0.5,
+    config: assistConfig,
   });
   const start = handAssist.assisted ? handAssist.start : preparedStart;
   const assist = subtract(start, preparedStart);
@@ -3235,6 +3239,9 @@ window.__THE_WALL_LAB__ = {
     physicsCoefficients,
     movement: ONE_WALL_HANDBALL.movement,
     ghostProfile: activeGhostProfile(),
+    handAssistProfileId: state.mode === 'practice' || state.difficulty === 'rookie'
+      ? ONE_WALL_HANDBALL.noviceHandAssist.id
+      : ONE_WALL_HANDBALL.handAssist.id,
   }),
   getDifficulty: () => state.difficulty,
   getWallSchool: () => cloneSerializable(state.wallSchool),
