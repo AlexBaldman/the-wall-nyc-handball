@@ -98,20 +98,32 @@ try {
   assert.ok(both.move.x > 0.14 && both.activeTechnique === 'palm',
     'Both thumbs must work simultaneously without cancelling movement');
 
-  // Releasing the right thumb must swing but preserve the left thumb's movement.
-  await touch(cdp, 'touchEnd', [joyRight]);
-  await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().activeTechnique === null, null, { timeout: 4000 }).catch(async (error) => {
-    const state = await page.evaluate(() => ({
-      inputs: window.__THE_WALL_MOBILE__.getInput(),
-      match: window.__THE_WALL_LAB__.getMatch(),
-      swings: window.__THE_WALL_LAB__.getMatchStats().swingAttempts,
-    }));
-    throw new Error(`Right-thumb release did not finish: ${JSON.stringify(state)}`, { cause: error });
+  // CDP's touchEnd protocol expects an *empty* touchPoints array and cannot
+  // natively lift only finger 2 while keeping finger 1 down. Both fingers were
+  // genuine touch contacts through charge and drag; now dispatch the captured
+  // right-finger pointerup, leaving the real left touch active.
+  const shootingPointer = await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput().shotPointer);
+  const attemptsBeforeRelease = await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts);
+  await page.locator('[data-mobile-hit]').dispatchEvent('pointerup', {
+    pointerId: shootingPointer,
+    pointerType: 'touch',
+    clientX: shotAim.x,
+    clientY: shotAim.y,
   });
-  assert.ok((await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts)) >= 1,
-    'A genuine touch release must use the physical swing command');
-  assert.ok((await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput().move.x)) > 0.1);
+  await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().activeTechnique === null, null, { timeout: 5000 });
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts),
+    attemptsBeforeRelease + 1,
+    'A right-thumb pointer release must commit exactly one physical swing',
+  );
+  assert.ok((await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput().move.x)) > 0.1,
+    'The left thumb must keep moving while the right thumb releases');
   await touch(cdp, 'touchEnd', []);
+  assert.equal(
+    await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts),
+    attemptsBeforeRelease + 1,
+    'Subsequent native touchend must not commit a duplicate swing',
+  );
   await page.waitForFunction(() => Math.abs(window.__THE_WALL_MOBILE__.getInput().move.x) < 0.001);
 
   // Dedicated touch shot selection must work independently of swing gestures.
