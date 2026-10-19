@@ -476,3 +476,4 @@ window.__THE_WALL_MVP__ = {
 // Initialize pause after the help dialog and game API are ready.
 await import('./mvp-pause.js');
 await import('./return-guide.js');
+await import('./mobile-court.js');
