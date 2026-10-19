@@ -4,6 +4,7 @@ export function clamp(value, low = -1, high = 1) {
 }
 
 export function joystickVector({ x, y, centerX, centerY, radius = 58, deadzone = 0.12 } = {}) {
+  if (![x, y, centerX, centerY, radius].every(Number.isFinite)) return Object.freeze({ x: 0, z: 0 });
   const r = Math.max(1, radius);
   const rawX = (x - centerX) / r;
   const rawZ = (y - centerY) / r;
