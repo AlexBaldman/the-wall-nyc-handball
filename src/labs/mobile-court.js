@@ -118,6 +118,10 @@ if (api?.setTouchMove && api?.beginTouchContact && viewport) {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     stick.addEventListener(name, (event) => releaseStick(event.pointerId));
   }
+  // iOS/Safari and multi-touch dispatch may deliver a touch end even when a
+  // pointer's capture lifecycle is interrupted. Never leave the player moving.
+  stick.addEventListener('touchend', () => releaseStick(), { passive: true });
+  stick.addEventListener('touchcancel', () => releaseStick(), { passive: true });
 
   function moveShot(event) {
     if (shotPointer !== event.pointerId || !shotOrigin) return;
@@ -168,6 +172,15 @@ if (api?.setTouchMove && api?.beginTouchContact && viewport) {
   for (const name of ['pointercancel', 'lostpointercapture']) {
     hit.addEventListener(name, (event) => releaseShot(event.pointerId, false));
   }
+  // A real touchend fallback is essential when multiple fingers share a
+  // viewport and a browser fails to deliver the expected captured pointerup.
+  // The guard in releaseShot makes an ordinary pointerup + touchend idempotent.
+  hit.addEventListener('touchend', () => {
+    if (shotPointer !== null) releaseShot(shotPointer, true);
+  }, { passive: true });
+  hit.addEventListener('touchcancel', () => {
+    if (shotPointer !== null) releaseShot(shotPointer, false);
+  }, { passive: true });
 
   for (const button of surface.querySelectorAll('[data-mobile-technique]')) {
     button.addEventListener('click', () => setShot(button.dataset.mobileTechnique));
