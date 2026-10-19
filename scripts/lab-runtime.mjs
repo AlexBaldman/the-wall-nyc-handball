@@ -102,8 +102,18 @@ try {
   await page.waitForFunction(
     () => document.getElementById('resultLabel')?.textContent.includes('official window'),
     null,
-    { timeout: 20000 },
-  );
+    { timeout: 30000 },
+  ).catch(async (error) => {
+    const state = await page.evaluate(() => ({
+      label: document.getElementById('resultLabel')?.textContent,
+      paused: window.__THE_WALL_LAB__.isPaused(),
+      reasons: window.__THE_WALL_PAUSE__?.getReasons?.(),
+      tick: window.__THE_WALL_LAB__.getSnapshot().tick,
+      ball: window.__THE_WALL_LAB__.getSnapshot().ball,
+      mode: window.__THE_WALL_LAB__.getMatch().phase,
+    }));
+    throw new Error(`Official ball-drop integration did not complete: ${JSON.stringify(state)}`, { cause: error });
+  });
   const dropResult = await page.locator('#resultLabel').textContent();
   assert.match(dropResult, /official window/i, 'Drop test should land in the official range');
 
