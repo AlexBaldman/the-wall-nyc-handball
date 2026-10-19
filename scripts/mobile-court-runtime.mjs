@@ -85,10 +85,18 @@ try {
   await touch(cdp, 'touchStart', [joyRight, shotOrigin]);
   await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().activeTechnique === 'palm');
   await touch(cdp, 'touchMove', [joyRight, shotAim]);
+  await page.waitForFunction((initial) => window.__THE_WALL_MOBILE__.getInput().aim.x > initial + 0.08,
+    initialAim, { timeout: 2500 }).catch(async (error) => {
+    const details = await page.evaluate(() => ({
+      input: window.__THE_WALL_MOBILE__.getInput(),
+      aimLabel: document.querySelector('[data-mobile-aim]')?.textContent,
+      hitElement: document.elementFromPoint(125, 125)?.outerHTML.slice(0, 100),
+    }));
+    throw new Error(`Touch swipe not reflected in aim: ${JSON.stringify(details)}; baseline ${initialAim}`, { cause: error });
+  });
   const both = await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput());
   assert.ok(both.move.x > 0.14 && both.activeTechnique === 'palm',
     'Both thumbs must work simultaneously without cancelling movement');
-  assert.ok(both.aim.x > initialAim + 0.08, 'Dragging while charging should visibly steer the shot');
 
   // Releasing the right thumb must swing but preserve the left thumb's movement.
   await touch(cdp, 'touchEnd', [joyRight]);
