@@ -518,7 +518,14 @@ const renderer = new THREE.WebGLRenderer({
   alpha: false,
   powerPreference: 'high-performance',
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+// Mobile GPUs should render the court, not millions of invisible pixels.
+function mobileRendering() {
+  return window.matchMedia?.('(pointer: coarse) and (max-width: 900px)').matches ?? false;
+}
+function renderPixelRatio() {
+  return Math.min(window.devicePixelRatio || 1, mobileRendering() ? 1.2 : 2);
+}
+renderer.setPixelRatio(renderPixelRatio());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -701,7 +708,7 @@ function createCourtScene() {
   const sun = new THREE.DirectionalLight(0xffa45e, 4.5);
   sun.position.set(-6, 12, 9);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1536, 1536);
+  sun.shadow.mapSize.set(mobileRendering() ? 768 : 1536, mobileRendering() ? 768 : 1536);
   sun.shadow.camera.left = -10;
   sun.shadow.camera.right = 10;
   sun.shadow.camera.top = 14;
@@ -2712,9 +2719,13 @@ function updateCamera(delta = 1 / 60) {
   camera.lookAt(cameraLookAt);
 
   const sensorHeight = 24;
-  camera.fov = THREE.MathUtils.radToDeg(
-    2 * Math.atan(sensorHeight / (2 * state.cameraFocalLength)),
-  );
+  const normalFov = 2 * Math.atan(sensorHeight / (2 * state.cameraFocalLength));
+  // Portrait screens need more vertical FOV to preserve the *horizontal*
+  // amount of court visible; otherwise players and returns leave the frame.
+  const screenFov = mobileRendering()
+    ? 2 * Math.atan(Math.tan(normalFov / 2) * Math.max(1, 1.35 / camera.aspect))
+    : normalFov;
+  camera.fov = Math.min(79, THREE.MathUtils.radToDeg(screenFov));
   camera.updateProjectionMatrix();
 }
 
@@ -2998,6 +3009,7 @@ function resize() {
   const rect = viewport.getBoundingClientRect();
   const width = Math.max(1, Math.round(rect.width));
   const height = Math.max(1, Math.round(rect.height));
+  renderer.setPixelRatio(renderPixelRatio());
   renderer.setSize(width, height, false);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
@@ -3015,6 +3027,39 @@ function updateAimFromPointer(event) {
     wallAimPoint.y - 0.42
   ) / (COURT.wallHeight - 0.72);
   input.aim.y = THREE.MathUtils.clamp(normalizedY * 2 - 1, -1, 1);
+}
+
+function setTouchMove(x, z) {
+  if (paused) return;
+  const dx = Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0;
+  const dz = Number.isFinite(z) ? Math.max(-1, Math.min(1, z)) : 0;
+  const length = Math.hypot(dx, dz);
+  input.touchMove = length > 1 ? { x: dx / length, z: dz / length } : { x: dx, z: dz };
+  if (Math.hypot(input.touchMove.x, input.touchMove.z) > 0.12) registerPlayerMovementIntent();
+}
+
+function setTouchAim(x, y) {
+  if (paused) return;
+  input.pointerAim = true;
+  input.aim.x = Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : input.aim.x;
+  input.aim.y = Number.isFinite(y) ? Math.max(-1, Math.min(1, y)) : input.aim.y;
+}
+
+function cancelTouchContact(technique) {
+  if (input.activeTechnique !== technique) return;
+  input.activeTechnique = null;
+  state.pendingMissCheck = false;
+  syncTechniqueUi();
+}
+
+function getTouchControlState() {
+  return {
+    move: { ...input.touchMove },
+    aim: { ...input.aim },
+    activeTechnique: input.activeTechnique,
+    charge: currentCharge(),
+    paused,
+  };
 }
 
 function downloadReplay() {
@@ -3309,6 +3354,12 @@ window.__THE_WALL_LAB__ = {
   getAssistance: () => state.assistance,
   getSwingContactLag,
   setAssistance,
+  setTouchMove,
+  setTouchAim,
+  getTouchControlState,
+  beginTouchContact: beginTechnique,
+  finishTouchContact: releaseTechnique,
+  cancelTouchContact,
   getWallSchool: () => cloneSerializable(state.wallSchool),
   startWallSchoolDrill,
   getAiObservation: () => cloneSerializable(state.ai.observation),
