@@ -56,9 +56,9 @@ const CONTROL_COPY = Object.freeze({
     hit: 'Hold + release A / Cross',
   }),
   touch: Object.freeze({
-    move: 'Move pad',
-    aim: 'Tap the wall',
-    hit: 'Hold + release a contact',
+    move: 'Left thumb analog stick',
+    aim: 'Slide right thumb while holding HIT (or tap wall)',
+    hit: 'Hold the large HIT pad, then release',
   }),
 });
 
@@ -302,7 +302,8 @@ function syncHelpControls(dialog) {
     <li><b>Move:</b> ${copy.move}</li>
     <li><b>Aim:</b> ${copy.aim}</li>
     <li><b>Open palm:</b> ${copy.hit}</li>
-    <li><b>Spin:</b> J/K or X/B on gamepad; extra contact buttons on touch.</li>
+    <li><b>Spin:</b> J/K or X/B on gamepad; choose Palm, Top, Slice, or Fist above the mobile HIT pad.</li>
+    ${inputMode() === 'touch' ? '<li><b>Two thumbs:</b> Move continuously with your left thumb; hold HIT and slide your right thumb sideways or up/down to aim, then lift to strike.</li>' : ''}
     <li><b>Pause:</b> P / Esc or Pause in the top bar. Switching tabs freezes a live rally.</li>
     <li><b>Return guide:</b> H toggles the in-court footwork marker and release cue. It never changes ball physics.</li>
     <li><b>Assistance:</b> Guided, Street, or Pure changes only bounded hand-start help, independently of opponent skill.</li>
