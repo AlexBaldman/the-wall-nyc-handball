@@ -129,7 +129,17 @@ try {
   // Dedicated touch shot selection must work independently of swing gestures.
   const top = await page.locator('[data-mobile-technique="topspin"]').boundingBox();
   await page.touchscreen.tap(top.x + top.width / 2, top.y + top.height / 2);
-  assert.equal(await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput().selected), 'topspin');
+  await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().selected === 'topspin', null, { timeout: 3000 })
+    .catch(async (error) => {
+      const details = await page.evaluate(() => ({
+        input: window.__THE_WALL_MOBILE__.getInput(),
+        elements: document.elementsFromPoint(
+          document.querySelector('[data-mobile-technique="topspin"]').getBoundingClientRect().x + 12,
+          document.querySelector('[data-mobile-technique="topspin"]').getBoundingClientRect().y + 12,
+        ).slice(0, 3).map((element) => element.outerHTML.slice(0, 100)),
+      }));
+      throw new Error(`Mobile contact selector missed tap: ${JSON.stringify(details)}`, { cause: error });
+    });
 
   // A cancelled gesture must never generate a contact.
   const beforeCancel = await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts);
