@@ -14,6 +14,7 @@ const files = [
   'app.js',
   'lab.html',
   'lab.css',
+  'mobile-court.css',
   'intercept.html',
   'intercept.css',
   'playtest.html',
