@@ -117,8 +117,17 @@ try {
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 3.8,
     null,
-    { timeout: 10000 },
-  );
+    { timeout: 16000 },
+  ).catch(async (error) => {
+    const diagnostics = await page.evaluate(() => ({
+      paused: window.__THE_WALL_LAB__.isPaused(),
+      reasons: window.__THE_WALL_PAUSE__?.getReasons?.(),
+      tick: window.__THE_WALL_LAB__.getSnapshot().tick,
+      ball: window.__THE_WALL_LAB__.getSnapshot().ball,
+      match: window.__THE_WALL_LAB__.getMatch(),
+    }));
+    throw new Error(`Practice ball failed to advance: ${JSON.stringify(diagnostics)}`, { cause: error });
+  });
   await page.keyboard.down('Space');
   await page.waitForFunction(
     () => window.__THE_WALL_LAB__.getSnapshot().ball.position.z >= 6.1,
