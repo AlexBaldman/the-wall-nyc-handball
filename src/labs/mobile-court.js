@@ -183,6 +183,14 @@ if (api?.setTouchMove && api?.beginTouchContact && viewport) {
   }, { passive: true });
 
   for (const button of surface.querySelectorAll('[data-mobile-technique]')) {
+    // On phones switch the contact at touch-down rather than relying on a
+    // delayed/suppressed synthetic click after a previous multi-touch gesture.
+    button.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'touch') {
+        event.preventDefault();
+        setShot(button.dataset.mobileTechnique);
+      }
+    });
     button.addEventListener('click', () => setShot(button.dataset.mobileTechnique));
   }
   help.addEventListener('click', () => document.getElementById('mvpHelpButton')?.click());
