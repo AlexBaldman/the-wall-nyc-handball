@@ -42,6 +42,7 @@ import {
   scoreWallSchoolContact,
 } from '../game/wall-school.js';
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
+import { resolveAssistanceProfile, resolveHandAssistConfig } from '../sports/handball/assistance-profile.js';
 
 const canvas = document.getElementById('labCanvas');
 const viewport = document.getElementById('viewportWrap');
@@ -247,6 +248,8 @@ function createMatchStats() {
     spacingTypes: {},
     pointReasons: {},
     assistedContacts: 0,
+    swingAttempts: 0,
+    airSwings: 0,
   };
 }
 
@@ -310,6 +313,7 @@ const state = {
   mode: 'practice',
   match: createMatchState({ targetScore: STREET_TARGET_SCORE }),
   difficulty: 'regular',
+  assistance: 'guided',
   onboardingStage: 0,
   matchStats: createMatchStats(),
   wallSchool: createWallSchoolState(),
@@ -327,6 +331,19 @@ const state = {
 
 function activeGhostProfile() {
   return getGhostProfile(state.difficulty);
+}
+
+function setAssistance(id) {
+  const next = resolveAssistanceProfile(id);
+  state.assistance = next.id;
+  return next.id;
+}
+
+function getSwingContactLag() {
+  const charge = input.activeTechnique ? currentCharge() : 0.2;
+  const technique = TECHNIQUES[input.activeTechnique ?? state.selectedTechnique];
+  const handSpeed = (7.4 + charge * 7.2) * technique.pace * (input.modifiers.drive ? 1.08 : 1);
+  return Math.max(0.075, 1.28 / handSpeed) * 0.5;
 }
 
 function createStreetMatchState(overrides = {}) {
@@ -493,6 +510,7 @@ scene.fog = new THREE.Fog(0x07131d, 16, 34);
 const camera = new THREE.PerspectiveCamera(27, 1, 0.02, 80);
 camera.position.copy(CAMERA_PRESETS[state.cameraIndex].position);
 camera.lookAt(CAMERA_PRESETS[state.cameraIndex].target);
+const cameraLookAt = CAMERA_PRESETS[state.cameraIndex].target.clone();
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -536,6 +554,20 @@ let audioContext = null;
 let accumulator = 0;
 let lastFrameTime = performance.now();
 let lastUiUpdate = 0;
+const recentFrameTimesMs = [];
+
+function getRenderHealth() {
+  if (!recentFrameTimesMs.length) return { sampleFrames: 0, meanFps: null, p95FrameMs: null, slowFrameRate: null };
+  const sorted = [...recentFrameTimesMs].sort((a, b) => a - b);
+  const average = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
+  const slowFrames = sorted.filter((value) => value > 33.4).length;
+  return Object.freeze({
+    sampleFrames: sorted.length,
+    meanFps: Math.round(1000 / average * 10) / 10,
+    p95FrameMs: Math.round(sorted[Math.ceil(sorted.length * 0.95) - 1] * 10) / 10,
+    slowFrameRate: Math.round(slowFrames / sorted.length * 1000) / 1000,
+  });
+}
 
 function createCourtTexture() {
   const textureCanvas = document.createElement('canvas');
@@ -834,7 +866,23 @@ function createBallVisual() {
   );
   scene.add(aura);
 
-  return { ball, aura };
+  // A subtle court-space ground reference makes the tiny regulation ball easier
+  // to locate in depth. It is visual only and never enters collision detection.
+  const groundGuide = new THREE.Mesh(
+    new THREE.RingGeometry(0.13, 0.18, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xb9ff66,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  groundGuide.rotation.x = -Math.PI / 2;
+  groundGuide.position.y = 0.024;
+  scene.add(groundGuide);
+
+  return { ball, aura, groundGuide };
 }
 
 function createPlayerVisual() {
@@ -1158,16 +1206,17 @@ function startSwing(techniqueKey, charge) {
     preparing: false,
     coefficients: physicsCoefficients,
   });
-  const assistConfig = state.mode === 'practice' || state.difficulty === 'rookie'
-    ? ONE_WALL_HANDBALL.noviceHandAssist
-    : ONE_WALL_HANDBALL.handAssist;
-  const handAssist = ONE_WALL_HANDBALL.planHandStart({
-    interceptPlan,
-    preparedStart,
-    wallTarget: target,
-    desiredContactTime: duration * 0.5,
-    config: assistConfig,
-  });
+  const assistConfig = resolveHandAssistConfig(state.assistance, ONE_WALL_HANDBALL);
+  const handAssist = assistConfig
+    ? ONE_WALL_HANDBALL.planHandStart({
+      interceptPlan,
+      preparedStart,
+      wallTarget: target,
+      desiredContactTime: duration * 0.5,
+      config: assistConfig,
+    })
+    : { assisted: false, start: preparedStart };
+  state.matchStats.swingAttempts += 1;
   const start = handAssist.assisted ? handAssist.start : preparedStart;
   const assist = subtract(start, preparedStart);
   const direction = normalize(subtract(target, start), { x: 0, y: 0, z: -1 });
@@ -2242,6 +2291,7 @@ function explainMiss() {
   else if (state.ball.position.y > 1.75) reason = 'High — point higher and meet it earlier, or let it drop.';
   else if (state.ball.position.y < 0.35) reason = 'Low — get closer to the bounce and release through its rise.';
 
+  state.matchStats.airSwings += 1;
   ui.contactGrade.textContent = 'Air swing';
   ui.contactReason.textContent = reason;
   ui.spacingMetric.textContent = lateral > 0.75 ? 'Reached' : 'No overlap';
@@ -2575,6 +2625,7 @@ function updateVisuals(snapshot = null) {
 
   ballObjects.ball.visible = ballState.active;
   ballObjects.aura.visible = ballState.active;
+  ballObjects.groundGuide.visible = ballState.active;
   if (ballState.active) {
     ballObjects.ball.position.set(
       ballState.position.x,
@@ -2582,6 +2633,10 @@ function updateVisuals(snapshot = null) {
       ballState.position.z,
     );
     ballObjects.aura.position.copy(ballObjects.ball.position);
+    ballObjects.groundGuide.position.set(ballState.position.x, 0.024, ballState.position.z);
+    const height = Math.max(0, ballState.position.y - BALL.radius);
+    ballObjects.groundGuide.scale.setScalar(0.85 + Math.min(0.9, height * 0.55));
+    ballObjects.groundGuide.material.opacity = Math.max(0.12, 0.42 - height * 0.14);
     ballObjects.ball.rotation.x += (ballState.angularVelocity.x ?? 0) / 60;
     ballObjects.ball.rotation.y += (ballState.angularVelocity.y ?? 0) / 60;
   }
@@ -2636,7 +2691,7 @@ function updateVisuals(snapshot = null) {
   }
 }
 
-function updateCamera() {
+function updateCamera(delta = 1 / 60) {
   const preset = CAMERA_PRESETS[state.cameraIndex];
   const focusX = state.mode === 'match'
     ? (state.player.position.x + state.ai.position.x) * 0.5
@@ -2648,10 +2703,13 @@ function updateCamera() {
       : 0;
   const desiredPosition = preset.position.clone();
   desiredPosition.x += lateralFollow;
-  camera.position.lerp(desiredPosition, 0.075);
+  // Exponential smoothing is frame-rate independent, unlike a fixed lerp step.
+  const cameraAlpha = 1 - Math.exp(-Math.max(0, delta) * 4.7);
+  camera.position.lerp(desiredPosition, cameraAlpha);
   const target = preset.target.clone();
   target.x += focusX * (state.cameraIndex === 1 ? 0.09 : 0.03);
-  camera.lookAt(target);
+  cameraLookAt.lerp(target, cameraAlpha);
+  camera.lookAt(cameraLookAt);
 
   const sensorHeight = 24;
   camera.fov = THREE.MathUtils.radToDeg(
@@ -2999,6 +3057,10 @@ function shortcutBlocked(event) {
 function frame(timestamp) {
   const delta = Math.min(0.05, Math.max(0, (timestamp - lastFrameTime) / 1000));
   lastFrameTime = timestamp;
+  if (!paused && !document.hidden && delta >= 0.001 && delta <= 0.05) {
+    recentFrameTimesMs.push(delta * 1000);
+    if (recentFrameTimesMs.length > 120) recentFrameTimesMs.shift();
+  }
   const replaySnapshot = paused ? null : updateReplay(delta);
 
   if (!paused && !state.replayPlayback) {
@@ -3014,7 +3076,7 @@ function frame(timestamp) {
 
   if (!paused) {
     updateVisuals(replaySnapshot);
-    updateCamera();
+    updateCamera(delta);
     syncTelemetryUi(timestamp);
   }
   renderer.render(scene, camera);
@@ -3239,11 +3301,14 @@ window.__THE_WALL_LAB__ = {
     physicsCoefficients,
     movement: ONE_WALL_HANDBALL.movement,
     ghostProfile: activeGhostProfile(),
-    handAssistProfileId: state.mode === 'practice' || state.difficulty === 'rookie'
-      ? ONE_WALL_HANDBALL.noviceHandAssist.id
-      : ONE_WALL_HANDBALL.handAssist.id,
+    renderHealth: getRenderHealth(),
+    assistanceProfileId: state.assistance,
+    handAssistProfileId: resolveHandAssistConfig(state.assistance, ONE_WALL_HANDBALL)?.id ?? 'none',
   }),
   getDifficulty: () => state.difficulty,
+  getAssistance: () => state.assistance,
+  getSwingContactLag,
+  setAssistance,
   getWallSchool: () => cloneSerializable(state.wallSchool),
   startWallSchoolDrill,
   getAiObservation: () => cloneSerializable(state.ai.observation),

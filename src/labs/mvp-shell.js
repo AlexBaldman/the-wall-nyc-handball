@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'the-wall:mvp:v1';
 const DIFFICULTIES = new Set(['rookie', 'regular', 'champion']);
+const ASSISTANCE_IDS = new Set(['guided', 'street', 'pure']);
 const POLL_INTERVAL_MS = 140;
 
 function readPreferences() {
@@ -7,10 +8,11 @@ function readPreferences() {
     const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}');
     return {
       difficulty: DIFFICULTIES.has(value.difficulty) ? value.difficulty : null,
+      assistance: ASSISTANCE_IDS.has(value.assistance) ? value.assistance : 'guided',
       firstRunComplete: value.firstRunComplete === true,
     };
   } catch {
-    return { difficulty: null, firstRunComplete: false };
+    return { difficulty: null, assistance: 'guided', firstRunComplete: false };
   }
 }
 
@@ -303,6 +305,7 @@ function syncHelpControls(dialog) {
     <li><b>Spin:</b> J/K or X/B on gamepad; extra contact buttons on touch.</li>
     <li><b>Pause:</b> P / Esc or Pause in the top bar. Switching tabs freezes a live rally.</li>
     <li><b>Return guide:</b> H toggles the in-court footwork marker and release cue. It never changes ball physics.</li>
+    <li><b>Assistance:</b> Guided, Street, or Pure changes only bounded hand-start help, independently of opponent skill.</li>
   `;
 }
 
@@ -400,6 +403,33 @@ const initialDifficulty = preferences.difficulty ?? 'rookie';
 api.setDifficulty(initialDifficulty);
 if (!preferences.difficulty) savePreferences({ difficulty: initialDifficulty });
 
+const assistanceDescriptions = Object.freeze({
+  guided: 'More forgiving physical hand start. Still requires a real ball-hand collision.',
+  street: 'Standard bounded hand guidance for realistic casual play.',
+  pure: 'No hand-start correction at all. Only your positioning and the real sweep count.',
+});
+const initialAssistance = api.setAssistance(preferences.assistance ?? 'guided');
+const assistanceDescription = document.getElementById('assistanceDescription');
+function syncAssistance() {
+  const selected = api.getAssistance();
+  for (const button of document.querySelectorAll('[data-assistance]')) {
+    const active = button.dataset.assistance === selected;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+  if (assistanceDescription) assistanceDescription.textContent = assistanceDescriptions[selected];
+}
+for (const button of document.querySelectorAll('[data-assistance]')) {
+  button.addEventListener('click', () => {
+    if (!ASSISTANCE_IDS.has(button.dataset.assistance)) return;
+    const selected = api.setAssistance(button.dataset.assistance);
+    savePreferences({ assistance: selected });
+    syncAssistance();
+  });
+}
+syncAssistance();
+if (initialAssistance !== preferences.assistance) savePreferences({ assistance: initialAssistance });
+
 if (firstRun) {
   document.querySelector('[data-difficulty="rookie"]')?.setAttribute('data-mvp-recommended', 'true');
   const practiceButton = document.getElementById('practiceFirstButton');
@@ -435,6 +465,7 @@ window.__THE_WALL_MVP__ = {
   getState: () => ({
     firstRun: !preferences.firstRunComplete,
     difficulty: preferences.difficulty,
+    assistance: api.getAssistance(),
     inputMode: inputMode(),
     warmupVisible: Boolean(warmupCard && !warmupCard.hidden),
   }),

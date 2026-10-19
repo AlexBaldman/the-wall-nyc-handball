@@ -1,4 +1,5 @@
 import { ONE_WALL_HANDBALL } from '../sports/handball/sport-pack.js';
+import { deriveReleaseCue } from '../presentation/coach-timing.js';
 
 const UPDATE_INTERVAL_MS = 100;
 const RADAR = Object.freeze({ width: 92, height: 120, padding: 7 });
@@ -8,7 +9,7 @@ const COPY = Object.freeze({
   move: Object.freeze({ label: 'MOVE', detail: 'Close the distance before you commit to the swing.' }),
   prepare: Object.freeze({ label: 'SET + LOAD', detail: 'You have a reachable window. Start preparing now.' }),
   hold: Object.freeze({ label: 'HOLD', detail: 'Stay balanced. Let the ball enter your contact window.' }),
-  strike: Object.freeze({ label: 'STRIKE', detail: 'The ball is inside the playable contact window.' }),
+  strike: Object.freeze({ label: 'RELEASE', detail: 'Release now so your moving hand meets the predicted ball path.' }),
 });
 
 function waitForLab() {
@@ -302,21 +303,27 @@ function coachState(api, previousCueState) {
     coefficients: currentPhysicsCoefficients(),
   });
   const visible = shouldShowCoach(api, snapshot);
-  const cueState = ONE_WALL_HANDBALL.stabilizeCue(
-    previousCueState,
-    plan.cue,
-    { visible },
-  );
   const footwork = ONE_WALL_HANDBALL.guideFootwork(
     plan,
     snapshot.player?.position,
+  );
+  const releaseCue = deriveReleaseCue({
+    plan,
+    footwork,
+    preparing,
+    swingContactLag: api.getSwingContactLag?.(),
+  });
+  const cueState = ONE_WALL_HANDBALL.stabilizeCue(
+    previousCueState,
+    releaseCue,
+    { visible },
   );
 
   return Object.freeze({
     visible,
     preparing,
-    rawCue: plan.cue,
-    cue: cueState.displayCue ?? plan.cue,
+    rawCue: releaseCue,
+    cue: cueState.displayCue ?? releaseCue,
     cueState,
     footwork,
     playerPosition: Object.freeze({ ...snapshot.player.position }),
