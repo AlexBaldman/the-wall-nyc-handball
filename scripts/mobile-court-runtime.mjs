@@ -100,7 +100,14 @@ try {
 
   // Releasing the right thumb must swing but preserve the left thumb's movement.
   await touch(cdp, 'touchEnd', [joyRight]);
-  await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().activeTechnique === null);
+  await page.waitForFunction(() => window.__THE_WALL_MOBILE__.getInput().activeTechnique === null, null, { timeout: 4000 }).catch(async (error) => {
+    const state = await page.evaluate(() => ({
+      inputs: window.__THE_WALL_MOBILE__.getInput(),
+      match: window.__THE_WALL_LAB__.getMatch(),
+      swings: window.__THE_WALL_LAB__.getMatchStats().swingAttempts,
+    }));
+    throw new Error(`Right-thumb release did not finish: ${JSON.stringify(state)}`, { cause: error });
+  });
   assert.ok((await page.evaluate(() => window.__THE_WALL_LAB__.getMatchStats().swingAttempts)) >= 1,
     'A genuine touch release must use the physical swing command');
   assert.ok((await page.evaluate(() => window.__THE_WALL_MOBILE__.getInput().move.x)) > 0.1);
