@@ -43,7 +43,7 @@
     "test:return-guide": "node scripts/return-guide.test.mjs",
     "test:first-rally-excellence": "node scripts/first-rally-excellence.test.mjs",
     "test:first-rally-runtime": "node scripts/first-rally-runtime.mjs",
-    "test:browser": "npm run test:first-rally-runtime && npm run test:lab-runtime && npm run test:intercept-runtime && npm run test:playtest-runtime",
+    "test:browser": "npm run test:lab-runtime && npm run test:first-rally-runtime && npm run test:intercept-runtime && npm run test:playtest-runtime",
     "test:mvp-point-flow": "node scripts/mvp-point-flow.test.mjs",
     "test:mvp-front-door": "node scripts/mvp-front-door.test.mjs",
     "test:rookie-rally-profile": "node scripts/rookie-rally-profile.test.mjs",
