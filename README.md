@@ -17,6 +17,12 @@ This is the extracted standalone version of the American handball concept that h
 
 **Local review:** Run `npm ci`, `npm test`, and `npm run serve`, then open `http://127.0.0.1:4173/lab.html`. The web build is static, and tests cover the simulation and core gameplay contracts.
 
+## Playable with two thumbs on mobile
+
+The phone-specific 3D court now fills the screen after you choose **Warm up** or **Play**. Use the **left analog thumb pad** to move, select a shot from **Palm / Top / Slice / Fist**, then **hold the large HIT pad with your right thumb**. Swipe your right thumb while holding to aim at different wall locations; lift to swing. The small coach pill tells you when to move, load, or release. Pause and Next/Feed are accessible inside the court.
+
+In portrait, the 3D camera widens its vertical field of view to keep the court and returning ball legible. Mobile rendering uses a lower pixel-ratio cap and lighter shadows. The official simulation remains unchanged. [Mobile interaction design, test protocol and real-device caveats](docs/mobile-court-pass.md).
+
 ## What it is
 
 A court-first browser game focused on the first thing that matters for this idea: does the rally loop feel alive? The current visual direction is a stylized sunset run at a fenced Lower East Side park, with arcade readability layered over one-wall rules.
@@ -129,9 +135,7 @@ For the 3D match on a standard controller:
 - `LT / RT`: lift or drive through the ball
 - hold `R3`: plant in the off-ball Set stance
 
-On phones, the court supplies a physical movement pad and keeps the four
-hold/release contact families docked at the bottom of the screen. Tap the wall
-to move the target before releasing a contact.
+On phones with a coarse touch pointer, the court becomes a full-height two-thumb surface after entering: an analog left stick moves, a large right contact button charges and releases, and sliding the right thumb during the hold aims the wall target. Choose the contact family above HIT. Directly tapping the wall remains available. Narrow desktop views retain the original non-touch controls.
 
 ### Preserved 2.5D match
 
